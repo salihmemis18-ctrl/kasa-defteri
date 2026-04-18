@@ -1253,64 +1253,33 @@ window.adminLoadFirmalar = async function () {
    ADMİN: KULLANICI OLUŞTUR
 ══════════════════════════════════════ */
 window.adminCreateUser = async function () {
-  const email   = G('nuEmail').value.trim();
-  const pw      = G('nuPw').value.trim();
-  const name    = G('nuName').value.trim();
-  const rol     = G('nuRol').value;
-  const selFid  = G('nuFirmaSelect').value;
+  const email = G('nuEmail').value.trim();
+  const pw    = G('nuPw').value.trim();
+  const name  = G('nuName').value.trim();
+  const rol   = G('nuRol').value;
+  const firma = G('nuFirmaSelect').value;
 
-  const btn = G('createUserBtn');
-  const msg = G('userMsg');
-
-  // Validasyon
-  if (!email || !pw) { showMsg('userMsg', 'E-posta ve şifre zorunludur', 'error'); return; }
-  if (!selFid)       { showMsg('userMsg', 'Lütfen bir firma seçin.\nÖnce firma oluşturun, ardından kullanıcı ekleyin.', 'error'); return; }
-
-  btn.disabled = true; btn.textContent = 'Oluşturuluyor...';
-  msg.style.display = 'none';
+  if (!email || !pw || !firma) {
+    showMsg('userMsg', 'E-posta, şifre ve firma zorunlu', 'error');
+    return;
+  }
 
   try {
-    /* ─ Cloud Function ile Auth kullanıcısı oluştur ─ */
-    const createFn = httpsCallable(funcs, 'createUser');
-    const res = await createFn({ email, password: pw, displayName: name });
-    const newUid = res.data.uid;
-
-    /* ─ Firestore'da kullanicilar belgesi oluştur ─ */
-    await setDoc(doc(db, 'kullanicilar', newUid), {
-      email,
-      displayName: name || '',
-      firmaId:     selFid,
-      rol:         rol,
-      pwChanged:   false,
-      createdAt:   new Date().toISOString(),
-      createdBy:   CU.email
+    await addDoc(collection(db, 'kullanicilar'), {
+      email: email,
+      ad: name || '',
+      rol: rol,
+      firmaId: firma,
+      pwChanged: false,
+      createdAt: new Date().toISOString()
     });
 
-    // Başarı mesajı
-    const firmaAdi = G('nuFirmaSelect').options[G('nuFirmaSelect').selectedIndex]?.text || selFid;
-    showMsg('userMsg',
-      `✓ Kullanıcı oluşturuldu!\nE-posta: ${email}\nGeçici Şifre: ${pw}\nFirma: ${firmaAdi}\nRol: ${rol}`,
-      'success');
-
-    toast('Kullanıcı oluşturuldu: ' + email, 'success');
-    G('nuEmail').value = ''; G('nuName').value = '';
-    adminLoadAll();
+    showMsg('userMsg', '✅ Kullanıcı oluşturuldu', 'success');
 
   } catch (e) {
-    console.error('adminCreateUser:', e);
-    let errMsg = 'Hata oluştu.';
-    if (e.code === 'functions/not-found' || String(e.message).includes('not-found')) {
-      errMsg = `⚠️ Cloud Function kurulu değil.\n\nManuel adımlar:\n1. Firebase Console → Authentication → Add User\n2. Firestore → kullanicilar/{uid} belgesi oluştur:\n   { email, firmaId:"${selFid}", rol:"user", pwChanged:false }`;
-    } else if (e.code === 'functions/already-exists' || String(e.message).includes('already-exists')) {
-      errMsg = 'Bu e-posta zaten kayıtlı.';
-    } else if (String(e.message).includes('invalid-email')) {
-      errMsg = 'Geçersiz e-posta formatı.';
-    } else {
-      errMsg = 'Hata: ' + (e.message || e.code);
-    }
-    showMsg('userMsg', errMsg, 'error');
+    console.error(e);
+    showMsg('userMsg', 'Hata: ' + e.message, 'error');
   }
-  btn.disabled = false; btn.textContent = 'Kullanıcı Oluştur';
 };
 
 /* ══════════════════════════════════════
