@@ -402,12 +402,12 @@ body {
   color: var(--t2); transition: all .12s;
 }
 .cal-nav button:hover { background: rgba(255,255,255,.06); color: var(--t1); }
-.cgrid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
-.cdow { text-align: center; font-size: 9px; font-weight: 600; color: var(--t3); padding: 5px 0; text-transform: uppercase; }
+.cgrid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; max-width: 340px; }
+.cdow { text-align: center; font-size: 8px; font-weight: 600; color: var(--t3); padding: 3px 0; text-transform: uppercase; }
 .cd {
   position: relative; aspect-ratio: 1; display: flex;
   align-items: center; justify-content: center;
-  border-radius: 8px; font-size: 12px; color: var(--t3);
+  border-radius: 6px; font-size: 11px; color: var(--t3);
   cursor: default; transition: all .12s; border: 1px solid transparent;
 }
 .cd.om { opacity: .25; }
@@ -669,17 +669,29 @@ body {
       <!-- ══════ ADMİN PANELİ ══════ -->
       <section id="secAdmin" class="sec">
         <div class="stitle">Admin Paneli</div>
-        <div class="ssub">Firma ve kullanıcı yönetimi</div>
+        <div class="ssub" id="adminSub">Firma ve kullanıcı yönetimi</div>
 
-        <!-- DASHBOARD STATS -->
-        <div class="stat-grid" id="adminStats" style="margin-bottom:18px">
-          <div class="stat"><div class="stat-l">Toplam Firma</div><div class="stat-v v" id="aSFirma">—</div></div>
-          <div class="stat"><div class="stat-l">Toplam Kullanıcı</div><div class="stat-v b" id="aSUser">—</div></div>
+        <!-- AKTİF FİRMA BANNER -->
+        <div id="adminFirmaBanner" style="display:none;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:16px;padding:14px 18px;margin-bottom:16px;align-items:center;gap:12px">
+          <span style="font-size:22px">🏢</span>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--t1)" id="adminFirmaAdi">—</div>
+            <div style="font-size:10px;color:var(--t3);font-family:monospace" id="adminFirmaIdEl"></div>
+          </div>
         </div>
 
-        <!-- FİRMA OLUŞTUR -->
-        <div class="panel">
+        <!-- STATS -->
+        <div class="stat-grid" style="margin-bottom:18px">
+          <div class="stat"><div class="stat-l">Firma Kullanıcıları</div><div class="stat-v v" id="aSUser">—</div></div>
+          <div class="stat"><div class="stat-l">Firma Durumu</div><div class="stat-v b" id="aSFirma">—</div></div>
+        </div>
+
+        <!-- FİRMA OLUŞTUR (sadece firmaId yoksa göster) -->
+        <div class="panel" id="pnlFirmaOlustur" style="display:none">
           <div class="ph"><div class="pt">🏢 Firma Oluştur</div></div>
+          <div style="font-size:12px;color:var(--t3);margin-bottom:12px;line-height:1.6">
+            Henüz bir firmaya bağlı değilsiniz. Yeni bir firma oluşturun — otomatik olarak bu firmaya atanacaksınız.
+          </div>
           <div class="fg2" style="margin-bottom:12px">
             <div class="ff" style="margin-bottom:0">
               <label>Firma Adı</label>
@@ -692,41 +704,36 @@ body {
           <div id="firmaMsg" style="font-size:12.5px;display:none;padding:10px;border-radius:var(--r);margin-top:4px"></div>
         </div>
 
-        <!-- KULLANICI OLUŞTUR -->
-        <div class="panel">
-          <div class="ph"><div class="pt">👤 Kullanıcı Oluştur</div></div>
+        <!-- KULLANICI EKLE (firmaId varsa göster) -->
+        <div class="panel" id="pnlUserEkle" style="display:none">
+          <div class="ph"><div class="pt">👤 Kullanıcı Ekle</div></div>
+          <div style="font-size:12px;color:var(--amber);background:var(--abg);border:1px solid rgba(245,158,11,.3);padding:8px 12px;border-radius:var(--r);margin-bottom:14px;line-height:1.6">
+            ⚠️ Kullanıcı oluşturmak için Firebase konsolunuzda <b>createUser</b> Cloud Function deploy edilmiş olmalıdır.
+          </div>
           <div class="fg2" style="margin-bottom:10px">
             <div class="ff" style="margin-bottom:0"><label>E-posta</label><input type="email" id="nuEmail" placeholder="kullanici@firma.com"></div>
             <div class="ff" style="margin-bottom:0"><label>Geçici Şifre</label><input type="text" id="nuPw" value="Gecici123!"></div>
           </div>
-          <div class="fg2" style="margin-bottom:10px">
+          <div class="fg2" style="margin-bottom:14px">
             <div class="ff" style="margin-bottom:0"><label>Ad Soyad</label><input type="text" id="nuName" placeholder="(opsiyonel)"></div>
             <div class="ff" style="margin-bottom:0">
               <label>Rol</label>
               <select id="nuRol">
-                <option value="user">Kullanıcı (user)</option>
+                <option value="user">Kullanıcı</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
           </div>
-          <div class="ff" style="margin-bottom:12px">
-            <label>Firma Seçimi</label>
-            <select id="nuFirmaSelect">
-              <option value="">— Firma seçin —</option>
-            </select>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary" id="createUserBtn" onclick="adminCreateUser()">Kullanıcı Oluştur</button>
-            <button class="btn btn-ghost btn-sm" onclick="adminLoadFirmalar()">🔄 Firma Listesini Yenile</button>
-          </div>
+          <!-- Firma seçimi YOK — otomatik firmaId = S.firmaId -->
+          <button class="btn btn-primary" id="createUserBtn" onclick="adminCreateUser()">Kullanıcı Ekle</button>
           <div id="userMsg" style="font-size:12.5px;display:none;padding:10px;border-radius:var(--r);margin-top:10px;white-space:pre-line"></div>
         </div>
 
-        <!-- FİRMA + KULLANICI LİSTESİ -->
-        <div class="panel">
+        <!-- KULLANICI LİSTESİ (sadece kendi firması) -->
+        <div class="panel" id="pnlUserList" style="display:none">
           <div class="ph">
-            <div class="pt">Firmalar ve Kullanıcılar</div>
-            <button class="btn btn-ghost btn-sm" onclick="adminLoadAll()">🔄 Yenile</button>
+            <div class="pt">👥 Firma Kullanıcıları</div>
+            <button class="btn btn-ghost btn-sm" onclick="adminLoadUsers()">🔄 Yenile</button>
           </div>
           <div id="adminList"><div class="empty">Yükleniyor...</div></div>
         </div>
@@ -880,11 +887,11 @@ import {
 } from 'firebase/auth';
 import {
   getFirestore, doc, getDoc, setDoc, addDoc,
-  collection, getDocs, deleteDoc, query, orderBy, serverTimestamp
+  collection, getDocs, deleteDoc, query, where, serverTimestamp
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
-/* ══ FIREBASE CONFIGURATION ══ */
+/* ══ FIREBASE CONFIG ══ */
 const firebaseApp = initializeApp({
   apiKey:            'AIzaSyBqocATCvNEdFpBqYWXt4vRNnxTdKpzi3c',
   authDomain:        'kasa-defteri-72048.firebaseapp.com',
@@ -899,7 +906,6 @@ const db    = getFirestore(firebaseApp);
 const funcs = getFunctions(firebaseApp, 'us-central1');
 
 /* ══ SABITLER ══ */
-const ADMIN_EMAIL = 'admin@gmail.com';
 const DEF_KAT = [
   { ad: 'Personel', icon: '👤' }, { ad: 'Gıda', icon: '🍽️' },
   { ad: 'Elektrik', icon: '⚡' }, { ad: 'Su', icon: '💧' },
@@ -907,10 +913,11 @@ const DEF_KAT = [
   { ad: 'Bağkur', icon: '🏛️' }
 ];
 
-/* ══ UYGULAMA STATE ══ */
-let CU        = null;   // Firebase Auth user
-let userMeta  = null;   // kullanicilar/{uid}
+/* ══ GLOBAL STATE ══ */
+let CU        = null;   // Firebase Auth user objesi
+let userMeta  = null;   // kullanicilar/{uid} verisi
 let firmaId   = null;   // aktif firma ID
+let firmaAdi  = null;   // aktif firma adı (gösterim için)
 let userRole  = null;   // 'admin' | 'user'
 let saveTimer = null;
 let confCb    = null;
@@ -936,11 +943,16 @@ let fBak = 'hepsi', fOrg = 'hepsi', fGec = 'hepsi';
 let calY, calM;
 
 /* ══════════════════════════════════════
+   YARDIMCI: Sadece kendi firmasının verisini döndür
+   Her listede firmaId izolasyonu bu fonksiyonla yapılır
+══════════════════════════════════════ */
+function onlyMyFirma(list) {
+  if (!firmaId) return [];
+  return (list || []).filter(x => x.firmaId === firmaId);
+}
+
+/* ══════════════════════════════════════
    EKRAN YÖNETİMİ
-   CSS: her .screen varsayılan display:none.
-   Her ekranın kendi .active kuralı var.
-   showScreen() tümünü gizler, sadece
-   istenenin .active sınıfını ekler.
 ══════════════════════════════════════ */
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
@@ -949,7 +961,7 @@ function showScreen(id) {
 }
 
 /* ══════════════════════════════════════
-   AUTH
+   AUTH — LOGIN / LOGOUT / ŞİFRE DEĞİŞTİR
 ══════════════════════════════════════ */
 window.doLogin = async function () {
   const email = G('loginEmail').value.trim();
@@ -976,6 +988,7 @@ window.doLogin = async function () {
 };
 
 window.doLogout = async function () {
+  CU = null; userMeta = null; firmaId = null; firmaAdi = null; userRole = null;
   await signOut(auth);
 };
 
@@ -988,9 +1001,11 @@ window.doPwChange = async function () {
   btn.disabled = true; btn.textContent = 'Kaydediliyor...';
   try {
     await updatePassword(CU, p1);
+    // Firestore'da pwChanged = true yaz
     await setDoc(doc(db, 'kullanicilar', CU.uid), { pwChanged: true }, { merge: true });
+    userMeta.pwChanged = true;
     toast('Şifreniz başarıyla değiştirildi', 'success');
-    await startUserApp();
+    await startApp();
   } catch (e) {
     btn.disabled = false; btn.textContent = 'Şifremi Kaydet ve Devam Et →';
     errShow('pwErr', e.code === 'auth/requires-recent-login'
@@ -1001,9 +1016,9 @@ window.doPwChange = async function () {
 
 /* ══ AUTH STATE OBSERVER ══ */
 onAuthStateChanged(auth, async (user) => {
-  // 1. Kullanıcı çıktı
   if (!user) {
-    CU = null; userMeta = null; firmaId = null; userRole = null;
+    // Çıkış yapıldı
+    CU = null; userMeta = null; firmaId = null; firmaAdi = null; userRole = null;
     const btn = G('loginBtn');
     if (btn) { btn.disabled = false; btn.textContent = 'Giriş Yap →'; }
     errHide('loginErr');
@@ -1011,79 +1026,78 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // 2. Kullanıcı giriş yaptı
   CU = user;
   showScreen('scLoading');
 
   try {
-    // Admin e-posta kontrolü
-    if (user.email === ADMIN_EMAIL) {
-      userRole = 'admin'; firmaId = null;
-      // Admin için meta belgesi yoksa oluştur
-      const adminRef = doc(db, 'kullanicilar', user.uid);
-      const adminSnap = await getDoc(adminRef);
-      if (!adminSnap.exists()) {
-        await setDoc(adminRef, {
-          email: user.email, rol: 'admin',
-          pwChanged: true, createdAt: new Date().toISOString()
-        });
-      }
-      startAdminApp();
-      return;
-    }
-
-    // Normal kullanıcı — meta belgesi oku
+    // Firestore'dan kullanıcı meta verisini çek
     const metaRef  = doc(db, 'kullanicilar', user.uid);
     const metaSnap = await getDoc(metaRef);
 
     if (!metaSnap.exists()) {
-      // Firestore kaydı yok — yeni kullanıcı gibi davran → şifre ekranı
-      showScreen('scPw');
+      // Firestore kaydı yok — admin console'dan eklenmeyi bekliyor
+      await signOut(auth);
+      showScreen('scLogin');
+      errShow('loginErr', 'Hesabınız henüz yapılandırılmamış. Lütfen yöneticinizle iletişime geçin.');
       return;
     }
 
     userMeta = metaSnap.data();
     userRole = userMeta.rol || 'user';
+    firmaId  = userMeta.firmaId || null;
 
-    // Admin rolü
-    if (userRole === 'admin') {
-      firmaId = userMeta.firmaId || null;
-      startAdminApp();
-      return;
-    }
-
-    // firmaId zorunlu kontrolü
-    if (!userMeta.firmaId) {
+    // firmaId yoksa — admin firma oluşturabilir, user engellenebilir
+    if (!firmaId && userRole !== 'admin') {
       await signOut(auth);
       showScreen('scLogin');
-      errShow('loginErr', 'Hesabınıza firma atanmamış. Lütfen admin ile iletişime geçin.');
+      errShow('loginErr', 'Hesabınıza henüz firma atanmamış. Lütfen yöneticinizle iletişime geçin.');
       return;
     }
 
-    firmaId = userMeta.firmaId;
+    // Firma adını çek (varsa)
+    if (firmaId) {
+      try {
+        const firmaSnap = await getDoc(doc(db, 'firmalar', firmaId));
+        firmaAdi = firmaSnap.exists() ? (firmaSnap.data().firmaAdi || 'Firma') : 'Firma';
+      } catch (_) { firmaAdi = 'Firma'; }
+    }
 
-    // İlk giriş şifre değiştirme
+    // İlk giriş — şifre değiştir
     if (!userMeta.pwChanged) {
       showScreen('scPw');
       return;
     }
 
-    await startUserApp();
+    await startApp();
 
   } catch (e) {
     console.error('onAuthStateChanged error:', e);
-    // Hata durumunda güvenli fallback
     showScreen('scLogin');
     errShow('loginErr', 'Oturum açılırken hata oluştu. Lütfen tekrar deneyin.');
   }
 });
 
 /* ══════════════════════════════════════
-   KULLANICI UYGULAMASI
+   UYGULAMA BAŞLAT
+   Admin ve user için ortak — rol'e göre UI ayrışır
 ══════════════════════════════════════ */
-async function startUserApp() {
-  G('hdrBals').style.display = 'flex';
-  G('hChip').textContent = firmaId ? 'Firma: ' + firmaId.slice(0, 12) + '...' : '';
+async function startApp() {
+  const isAdmin = userRole === 'admin';
+  const firmaLabel = firmaAdi ? firmaAdi : (firmaId ? firmaId.slice(0, 12) + '...' : '—');
+
+  // Header
+  if (firmaId) {
+    G('hdrBals').style.display = 'flex';
+  } else {
+    G('hdrBals').style.display = 'none';
+  }
+  G('hChip').textContent = firmaLabel;
+
+  // Sidebar — admin de user menüsünü görsün + admin paneli eklensin
+  const adminItem = isAdmin
+    ? `<div class="sb-section">Yönetim</div>
+       <div class="sb-item" onclick="navTo('secAdmin')"><span class="sb-ic">⚙️</span>Admin Paneli</div>`
+    : '';
 
   G('sidebarEl').innerHTML = `
     <div class="sb-section">Ana Menü</div>
@@ -1093,44 +1107,44 @@ async function startUserApp() {
     <div class="sb-item" onclick="navTo('secGider')"><span class="sb-ic">📤</span>Giderler</div>
     <div class="sb-item" onclick="navTo('secOrg')"><span class="sb-ic">🎊</span>Organizasyonlar</div>
     <div class="sb-section">Raporlar</div>
-    <div class="sb-item" onclick="navTo('secGecmis')"><span class="sb-ic">📋</span>İşlem Geçmişi</div>`;
+    <div class="sb-item" onclick="navTo('secGecmis')"><span class="sb-ic">📋</span>İşlem Geçmişi</div>
+    ${adminItem}`;
+
+  const adminMni = isAdmin
+    ? `<button class="mni" onclick="navTo('secAdmin')"><span class="ic">⚙️</span>Admin</button>`
+    : '';
 
   G('mnavEl').innerHTML = `
     <button class="mni on" onclick="navTo('secPanel')"><span class="ic">📊</span>Panel</button>
     <button class="mni" onclick="navTo('secGider')"><span class="ic">📤</span>Gider</button>
     <button class="mni" onclick="navTo('secOrg')"><span class="ic">🎊</span>Org.</button>
     <button class="mni" onclick="navTo('secGecmis')"><span class="ic">📋</span>Geçmiş</button>
-    <button class="mni" onclick="navTo('secBakiye')"><span class="ic">💰</span>Bakiye</button>`;
+    <button class="mni" onclick="navTo('secBakiye')"><span class="ic">💰</span>Bakiye</button>
+    ${adminMni}`;
 
-  G('panelDate').textContent = new Date().toLocaleDateString('tr-TR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  G('panelDate').textContent = new Date().toLocaleDateString('tr-TR', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
   const now = new Date(); calY = now.getFullYear(); calM = now.getMonth();
 
-  await loadFromCloud();
+  if (firmaId) {
+    await loadFromCloud();
+  } else {
+    S = freshS(); updateAll();
+  }
+
   showScreen('scApp');
   navTo('secPanel');
-}
 
-/* ══════════════════════════════════════
-   ADMİN UYGULAMASI
-══════════════════════════════════════ */
-function startAdminApp() {
-  G('hdrBals').style.display = 'none';
-  G('hChip').textContent = '⚡ Admin';
-
-  G('sidebarEl').innerHTML = `
-    <div class="sb-section">Admin</div>
-    <div class="sb-item on" onclick="navTo('secAdmin')"><span class="sb-ic">⚙️</span>Admin Panel</div>`;
-
-  G('mnavEl').innerHTML = `
-    <button class="mni on" onclick="navTo('secAdmin')"><span class="ic">⚙️</span>Admin</button>`;
-
-  showScreen('scApp');
-  navTo('secAdmin');
-  adminLoadAll();
+  // Admin panelini hazırla
+  if (isAdmin) {
+    setupAdminPanel();
+  }
 }
 
 /* ══════════════════════════════════════
    CLOUD SYNC  →  firmalar/{firmaId}
+   Veri firma dokümanında tutulur
 ══════════════════════════════════════ */
 async function loadFromCloud() {
   if (!firmaId) { S = freshS(); updateAll(); return; }
@@ -1141,7 +1155,7 @@ async function loadFromCloud() {
       S = {
         nakit:           typeof d.nakit === 'number' ? d.nakit : 0,
         banka:           typeof d.banka === 'number' ? d.banka : 0,
-        kategoriler:     Array.isArray(d.kategoriler) ? d.kategoriler : DEF_KAT.map(k=>({...k})),
+        kategoriler:     Array.isArray(d.kategoriler)     ? d.kategoriler     : DEF_KAT.map(k=>({...k})),
         bakiyeIslemleri: Array.isArray(d.bakiyeIslemleri) ? d.bakiyeIslemleri : [],
         giderler:        Array.isArray(d.giderler)        ? d.giderler        : [],
         organizasyonlar: Array.isArray(d.organizasyonlar) ? d.organizasyonlar : [],
@@ -1155,8 +1169,7 @@ async function loadFromCloud() {
   } catch (e) {
     console.error('loadFromCloud:', e);
     toast('Veriler yüklenemedi. Bağlantı sorunu.', 'error');
-    S = freshS();
-    updateAll();
+    S = freshS(); updateAll();
   }
 }
 
@@ -1165,14 +1178,16 @@ async function persistToCloud() {
   showSync();
   try {
     await setDoc(doc(db, 'firmalar', firmaId), {
-      nakit: S.nakit, banka: S.banka,
+      firmaAdi:        firmaAdi || '',
+      nakit:           S.nakit,
+      banka:           S.banka,
       kategoriler:     S.kategoriler,
       bakiyeIslemleri: S.bakiyeIslemleri,
       giderler:        S.giderler,
       organizasyonlar: S.organizasyonlar,
       islemler:        S.islemler,
       updatedAt:       new Date().toISOString()
-    });
+    }, { merge: true });
     hideSync();
   } catch (e) {
     hideSync();
@@ -1185,258 +1200,244 @@ function sched() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(persistToCloud, 900);
 }
-
 function showSync() { G('syncEl').classList.add('on'); }
 function hideSync() { setTimeout(() => G('syncEl').classList.remove('on'), 800); }
 
 /* ══════════════════════════════════════
+   ADMİN PANELİ — SETUP
+   firmaId varsa: kullanıcı ekle + listele
+   firmaId yoksa: firma oluştur göster
+══════════════════════════════════════ */
+function setupAdminPanel() {
+  const hasFirma = !!firmaId;
+
+  // Banner
+  const banner = G('adminFirmaBanner');
+  if (hasFirma && banner) {
+    banner.style.display = 'flex';
+    txt('adminFirmaAdi', firmaAdi || 'Firma');
+    txt('adminFirmaIdEl', 'ID: ' + firmaId);
+  }
+
+  // Firma oluştur paneli: sadece firmaId yoksa
+  const pOlustur = G('pnlFirmaOlustur');
+  if (pOlustur) pOlustur.style.display = hasFirma ? 'none' : 'block';
+
+  // Kullanıcı ekle + liste: sadece firmaId varsa
+  const pEkle = G('pnlUserEkle');
+  if (pEkle) pEkle.style.display = hasFirma ? 'block' : 'none';
+  const pList = G('pnlUserList');
+  if (pList) pList.style.display = hasFirma ? 'block' : 'none';
+
+  // Stats
+  txt('aSFirma', hasFirma ? '✓ Atandı' : '✗ Yok');
+
+  if (hasFirma) adminLoadUsers();
+}
+
+/* ══════════════════════════════════════
    ADMİN: FİRMA OLUŞTUR
+   1. firmalar koleksiyonuna ekle
+   2. admin'in kullanicilar kaydını güncelle (firmaId ata)
 ══════════════════════════════════════ */
 window.adminCreateFirma = async function () {
   const ad  = G('firmaAdi').value.trim();
   const btn = G('firmaBtn');
-  const msg = G('firmaMsg');
-
-  if (!ad) { showMsg('firmaMsg', 'Firma adı boş olamaz', 'error'); return; }
+  if (!ad) { showMsg('firmaMsg', '❌ Firma adı boş olamaz', 'error'); return; }
   btn.disabled = true; btn.textContent = 'Oluşturuluyor...';
-  msg.style.display = 'none';
+  G('firmaMsg').style.display = 'none';
 
   try {
-    // Yeni firma belgesi oluştur (otomatik ID)
+    // 1. firmalar koleksiyonuna yeni belge ekle
     const firmaRef = await addDoc(collection(db, 'firmalar'), {
       firmaAdi:  ad,
-      olusturan: CU.email,
-      olusturma: new Date().toISOString(),
+      ownerUid:  CU.uid,
+      createdAt: new Date().toISOString(),
       // Başlangıç veri yapısı
       nakit: 0, banka: 0,
       kategoriler:     DEF_KAT.map(k=>({...k})),
       bakiyeIslemleri: [], giderler: [], organizasyonlar: [], islemler: []
     });
 
-    showMsg('firmaMsg',
-      `✓ Firma oluşturuldu!\nFirma Adı: ${ad}\nFirma ID: ${firmaRef.id}`,
-      'success');
-    G('firmaAdi').value = '';
-    toast('Firma oluşturuldu: ' + firmaRef.id, 'success');
+    const yeniFirmaId = firmaRef.id;
 
-    // Dropdown'u güncelle
-    adminLoadFirmalar();
+    // 2. Admin'in kullanicilar kaydını güncelle — firmaId ata
+    await setDoc(doc(db, 'kullanicilar', CU.uid), {
+      firmaId: yeniFirmaId
+    }, { merge: true });
+
+    // State güncelle
+    firmaId  = yeniFirmaId;
+    firmaAdi = ad;
+    userMeta.firmaId = yeniFirmaId;
+
+    showMsg('firmaMsg', `✅ Firma oluşturuldu!
+Firma: ${ad}
+ID: ${yeniFirmaId}`, 'success');
+    G('firmaAdi').value = '';
+    toast('Firma oluşturuldu: ' + ad, 'success');
+
+    // Header ve admin panelini güncelle
+    G('hChip').textContent = ad;
+    G('hdrBals').style.display = 'flex';
+    setupAdminPanel();
+
+    // Firma verisini yükle
+    await loadFromCloud();
 
   } catch (e) {
     console.error('adminCreateFirma:', e);
-    showMsg('firmaMsg', 'Hata: ' + (e.message || e.code), 'error');
+    showMsg('firmaMsg', '❌ Hata: ' + (e.message || e.code), 'error');
   }
   btn.disabled = false; btn.textContent = 'Firma Oluştur';
 };
 
 /* ══════════════════════════════════════
-   ADMİN: FİRMA LİSTESİ (dropdown için)
-══════════════════════════════════════ */
-window.adminLoadFirmalar = async function () {
-  const sel = G('nuFirmaSelect');
-  sel.innerHTML = '<option value="">— Firma seçin —</option>';
-  try {
-    const snap = await getDocs(collection(db, 'firmalar'));
-    snap.forEach(d => {
-      const f = d.data();
-      const opt = document.createElement('option');
-      opt.value = d.id;
-      opt.textContent = (f.firmaAdi || 'İsimsiz Firma') + '  [' + d.id.slice(0,8) + '...]';
-      sel.appendChild(opt);
-    });
-  } catch (e) {
-    console.error('adminLoadFirmalar:', e);
-  }
-};
-
-/* ══════════════════════════════════════
    ADMİN: KULLANICI OLUŞTUR
+   firmaId = S.firmaId (otomatik — seçim yok)
+   Cloud Function: createUser(email, password, displayName, firmaId, rol)
 ══════════════════════════════════════ */
 window.adminCreateUser = async function () {
   const email = G('nuEmail').value.trim();
   const pw    = G('nuPw').value.trim();
   const name  = G('nuName').value.trim();
   const rol   = G('nuRol').value;
-  const firma = G('nuFirmaSelect').value;
+  const btn   = G('createUserBtn');
 
-  if (!email || !pw || !firma) {
-    showMsg('userMsg', 'E-posta, şifre ve firma zorunlu', 'error');
-    return;
+  if (!firmaId) {
+    showMsg('userMsg', '❌ Önce bir firma oluşturun', 'error'); return;
   }
+  if (!email || !pw) {
+    showMsg('userMsg', '❌ E-posta ve şifre zorunlu', 'error'); return;
+  }
+  if (pw.length < 6) {
+    showMsg('userMsg', '❌ Şifre en az 6 karakter olmalı', 'error'); return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Oluşturuluyor...';
+  showMsg('userMsg', '⏳ Kullanıcı oluşturuluyor...', 'success');
 
   try {
-    await addDoc(collection(db, 'kullanicilar'), {
-      email: email,
-      ad: name || '',
-      rol: rol,
-      firmaId: firma,
-      pwChanged: false,
-      createdAt: new Date().toISOString()
+    // Cloud Function çağrısı — otomatik firmaId = S.firmaId
+    const createUserFn = httpsCallable(funcs, 'createUser');
+    const result = await createUserFn({
+      email,
+      password:    pw,
+      displayName: name || email,
+      firmaId:     firmaId,   // ← otomatik, seçim yok
+      rol
     });
 
-    showMsg('userMsg', '✅ Kullanıcı oluşturuldu', 'success');
+    if (result.data && result.data.uid) {
+      showMsg('userMsg',
+        `✅ Kullanıcı oluşturuldu!
+E-posta: ${email}
+Geçici Şifre: ${pw}
+Firma: ${firmaAdi}
+Rol: ${rol}
+
+⚠️ Kullanıcı ilk girişte şifresini değiştirmek zorunda kalacak.`,
+        'success');
+      G('nuEmail').value = ''; G('nuName').value = '';
+      toast('Kullanıcı eklendi', 'success');
+      adminLoadUsers();
+    } else {
+      throw new Error(result.data?.error || 'Bilinmeyen hata');
+    }
 
   } catch (e) {
-    console.error(e);
-    showMsg('userMsg', 'Hata: ' + e.message, 'error');
+    console.error('adminCreateUser:', e);
+    if (e.code === 'functions/not-found' || e.code === 'functions/internal') {
+      showMsg('userMsg',
+        `❌ Cloud Function bulunamadı.
+
+Alternatif:
+1. Firebase Console → Authentication → Add User
+2. E-posta: ${email} / Şifre: ${pw}
+3. Oluşan UID'yi kopyalayın
+4. Firestore → kullanicilar → [UID] belgesi:
+   { email, firmaId: "${firmaId}", rol: "${rol}", pwChanged: false }`,
+        'error');
+    } else {
+      showMsg('userMsg', '❌ Hata: ' + (e.message || e.code), 'error');
+    }
   }
+  btn.disabled = false; btn.textContent = 'Kullanıcı Ekle';
 };
 
 /* ══════════════════════════════════════
-   ADMİN: TÜM LİSTE (firmalar + kullanıcılar)
+   ADMİN: KULLANICI LİSTESİ
+   Sadece kendi firmasının kullanıcıları
+   where("firmaId", "==", firmaId) filtresi
 ══════════════════════════════════════ */
-window.adminLoadAll = async function () {
-  adminLoadFirmalar(); // dropdown güncelle
-
+window.adminLoadUsers = async function () {
   const el = G('adminList');
+  if (!el) return;
+  if (!firmaId) { el.innerHTML = '<div class="empty">Firma atanmamış</div>'; return; }
+
   el.innerHTML = '<div class="empty">Yükleniyor...</div>';
-
   try {
-    // Paralel yükle
-    const [firmaSnap, userSnap] = await Promise.all([
-      getDocs(collection(db, 'firmalar')),
-      getDocs(collection(db, 'kullanicilar'))
-    ]);
+    // KRİTİK: sadece kendi firmasının kullanıcıları
+    const q = query(
+      collection(db, 'kullanicilar'),
+      where('firmaId', '==', firmaId)
+    );
+    const snap = await getDocs(q);
 
-    // Stats
-    txt('aSFirma', firmaSnap.size.toString());
-    txt('aSUser',  userSnap.size.toString());
+    txt('aSUser', snap.size.toString());
 
-    // Firmaları map'e al
-    const firmalar = {};
-    firmaSnap.forEach(d => { firmalar[d.id] = { id: d.id, ...d.data() }; });
-
-    // Kullanıcıları firmaId'ye göre grupla
-    const usersByFirma = {};
-    userSnap.forEach(d => {
-      const u = d.data();
-      const fid = u.firmaId || '__no_firma__';
-      if (!usersByFirma[fid]) usersByFirma[fid] = [];
-      usersByFirma[fid].push({ uid: d.id, ...u });
-    });
-
-    if (firmaSnap.empty && userSnap.empty) {
-      el.innerHTML = '<div class="empty">Henüz firma veya kullanıcı yok</div>';
+    if (snap.empty) {
+      el.innerHTML = '<div class="empty">Bu firmada henüz kullanıcı yok</div>';
       return;
     }
 
     let html = '';
+    snap.forEach(d => {
+      const u = d.data();
+      const rolBadge = u.rol === 'admin'
+        ? '<span class="badge ba">Admin</span>'
+        : '<span class="badge bbl">User</span>';
+      const pwBadge = u.pwChanged
+        ? '<span class="badge bt">Şifre ✓</span>'
+        : '<span class="badge bv">İlk Giriş Bekleniyor</span>';
+      const ee = (u.email || '').replace(/'/g, "\'");
+      const isSelf = d.id === CU.uid;
 
-    // Her firmayı göster
-    firmaSnap.forEach(fd => {
-      const f = fd.data();
-      const fid = fd.id;
-      const users = usersByFirma[fid] || [];
-      const firmaAdi = f.firmaAdi || 'İsimsiz Firma';
-
-      html += `<div class="firma-card">
-        <div class="firma-header">
-          <div>
-            <div class="firma-name">🏢 ${firmaAdi}</div>
-            <div class="firma-id">ID: ${fid} · ${users.length} kullanıcı</div>
+      html += `<div class="user-list-item">
+        <div>
+          <div style="font-size:12.5px;font-weight:500">
+            ${u.displayName || u.ad || ''}
+            ${(u.displayName || u.ad) ? '·' : ''}
+            <span style="color:var(--cyan)">${u.email || d.id}</span>
+            ${isSelf ? '<span class="badge bvl" style="margin-left:4px">Siz</span>' : ''}
           </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-sm" onclick="adminViewFirma('${fid}','${firmaAdi}')">📊 Veri</button>
-            <button class="btn btn-danger btn-sm" onclick="adminDelFirma('${fid}','${firmaAdi}')">🗑️ Sil</button>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px;display:flex;gap:5px;flex-wrap:wrap">
+            ${rolBadge} ${pwBadge}
           </div>
-        </div>`;
-
-      if (users.length === 0) {
-        html += '<div style="font-size:12px;color:var(--t3);padding:6px 0">Bu firmaya henüz kullanıcı eklenmemiş</div>';
-      } else {
-        users.forEach(u => {
-          const rolBadge = u.rol === 'admin'
-            ? '<span class="badge ba">Admin</span>'
-            : '<span class="badge bbl">User</span>';
-          const pwBadge = u.pwChanged
-            ? '<span class="badge bt">Şifre ✓</span>'
-            : '<span class="badge bv">İlk Giriş Bekleniyor</span>';
-          const ee = (u.email||'').replace(/'/g,"\\'");
-          html += `<div class="user-list-item">
-            <div>
-              <div style="font-size:12.5px;font-weight:500">${u.displayName||''} ${u.displayName?'·':''} <span style="color:var(--cyan)">${u.email||u.uid}</span></div>
-              <div style="font-size:11px;color:var(--t3);margin-top:2px;display:flex;gap:5px;flex-wrap:wrap">${rolBadge} ${pwBadge}</div>
-            </div>
-            <div style="display:flex;gap:5px;flex-wrap:wrap">
-              <button class="btn btn-warn btn-sm" onclick="adminResetPw('${u.uid}','${ee}')">🔑</button>
-              <button class="btn btn-danger btn-sm" onclick="adminDelUser('${u.uid}','${ee}')">🗑️</button>
-            </div>
-          </div>`;
-        });
-      }
-      html += '</div>';
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${!isSelf ? `<button class="btn btn-warn btn-sm" onclick="adminResetPw('${d.id}','${ee}')">🔑</button>
+          <button class="btn btn-danger btn-sm" onclick="adminDelUser('${d.id}','${ee}')">🗑️</button>` : ''}
+        </div>
+      </div>`;
     });
-
-    // firmaId atanmamış kullanıcılar
-    const orphans = usersByFirma['__no_firma__'] || [];
-    if (orphans.length > 0) {
-      html += `<div class="firma-card" style="border-color:rgba(239,68,68,.3)">
-        <div class="firma-header"><div><div class="firma-name" style="color:var(--red)">⚠️ Firmaya Atanmamış Kullanıcılar</div></div></div>`;
-      orphans.forEach(u => {
-        const ee = (u.email||'').replace(/'/g,"\\'");
-        html += `<div class="user-list-item">
-          <div><div style="font-size:12.5px">${u.email||u.uid}</div></div>
-          <button class="btn btn-danger btn-sm" onclick="adminDelUser('${u.uid}','${ee}')">🗑️</button>
-        </div>`;
-      });
-      html += '</div>';
-    }
-
-    el.innerHTML = html || '<div class="empty">Henüz veri yok</div>';
+    el.innerHTML = html;
 
   } catch (e) {
     el.innerHTML = `<div class="empty" style="color:var(--red)">Yükleme hatası: ${e.message}</div>`;
-    console.error('adminLoadAll:', e);
+    console.error('adminLoadUsers:', e);
   }
-};
-
-window.adminViewFirma = async function (fid, firmaAdi) {
-  try {
-    const snap = await getDoc(doc(db, 'firmalar', fid));
-    if (snap.exists()) {
-      const d = snap.data();
-      const ozet = {
-        'Firma Adı': d.firmaAdi || '—',
-        'Nakit': d.nakit || 0,
-        'Banka': d.banka || 0,
-        'Gider Sayısı': (d.giderler||[]).length,
-        'Organizasyon Sayısı': (d.organizasyonlar||[]).length,
-        'İşlem Sayısı': (d.islemler||[]).length,
-        'Son Güncelleme': d.updatedAt || '—'
-      };
-      const msg = Object.entries(ozet).map(([k,v]) => `${k}: ${v}`).join('\n');
-      alert(`📊 ${firmaAdi}\n${'─'.repeat(40)}\n${msg}`);
-    } else {
-      alert('Bu firmanın veri belgesi bulunamadı.');
-    }
-  } catch (e) {
-    toast('Veri yüklenemedi: ' + e.message, 'error');
-  }
-};
-
-window.adminDelFirma = function (fid, firmaAdi) {
-  conf('Firmayı Sil',
-    `"${firmaAdi}" firması ve tüm verileri silinecek. Bu işlem geri alınamaz!`,
-    'Firmayı Sil',
-    async () => {
-      try {
-        await deleteDoc(doc(db, 'firmalar', fid));
-        toast('Firma silindi', 'success');
-        adminLoadAll();
-      } catch (e) { toast('Silme hatası: ' + e.message, 'error'); }
-    }
-  );
 };
 
 window.adminResetPw = function (uid, email) {
   conf('Şifre Sıfırla',
-    `"${email}" kullanıcısı bir sonraki girişte şifresini değiştirmek zorunda kalacak.`,
+    `"${email}" kullanıcısı bir sonraki girişinde şifresini değiştirmek zorunda kalacak.`,
     'Sıfırla',
     async () => {
       try {
         await setDoc(doc(db, 'kullanicilar', uid), { pwChanged: false }, { merge: true });
         toast('Şifre sıfırlama işaretlendi', 'success');
-        adminLoadAll();
+        adminLoadUsers();
       } catch (e) { toast('Hata: ' + e.message, 'error'); }
     }
   );
@@ -1450,7 +1451,7 @@ window.adminDelUser = function (uid, email) {
       try {
         await deleteDoc(doc(db, 'kullanicilar', uid));
         toast('Kullanıcı kaydı silindi', 'success');
-        adminLoadAll();
+        adminLoadUsers();
       } catch (e) { toast('Hata: ' + e.message, 'error'); }
     }
   );
@@ -1462,26 +1463,22 @@ window.adminDelUser = function (uid, email) {
 function G(id)  { return document.getElementById(id); }
 function txt(id, v) { const e = G(id); if (e) e.textContent = v; }
 
-function errShow(id, msg) {
-  const e = G(id); if (e) { e.textContent = msg; e.classList.add('show'); }
-}
-function errHide(id) {
-  const e = G(id); if (e) e.classList.remove('show');
-}
+function errShow(id, msg) { const e=G(id); if(e){ e.textContent=msg; e.classList.add('show'); } }
+function errHide(id)      { const e=G(id); if(e) e.classList.remove('show'); }
 
 function showMsg(id, text, type) {
   const el = G(id); if (!el) return;
-  el.style.display = 'block';
-  el.style.background = type === 'success' ? 'rgba(16,185,129,.1)'  : 'rgba(239,68,68,.1)';
-  el.style.border      = type === 'success' ? '1px solid rgba(16,185,129,.3)' : '1px solid rgba(239,68,68,.3)';
-  el.style.color       = type === 'success' ? '#34d399' : '#f87171';
-  el.style.whiteSpace  = 'pre-line';
+  el.style.display    = 'block';
+  el.style.background = type==='success' ? 'rgba(16,185,129,.1)' : 'rgba(239,68,68,.1)';
+  el.style.border     = type==='success' ? '1px solid rgba(16,185,129,.3)' : '1px solid rgba(239,68,68,.3)';
+  el.style.color      = type==='success' ? '#34d399' : '#f87171';
+  el.style.whiteSpace = 'pre-line';
   el.textContent = text;
 }
 
-window.toast = function (msg, type = 'success') {
+window.toast = function (msg, type='success') {
   G('toastMsg').textContent = msg;
-  G('toastIcon').textContent = type === 'success' ? '✓' : '✗';
+  G('toastIcon').textContent = type==='success' ? '✓' : '✗';
   const t = G('toastEl');
   t.className = 'toast ' + type + ' on';
   clearTimeout(t._t);
@@ -1494,126 +1491,118 @@ function conf(title, msg, okLabel, cb) {
   confCb = cb;
   G('cConfirm').classList.add('open');
 }
-window.confYesF = function () { G('cConfirm').classList.remove('open'); if(confCb) confCb(); confCb = null; };
-window.confNo   = function () { G('cConfirm').classList.remove('open'); confCb = null; };
+window.confYesF = function () { G('cConfirm').classList.remove('open'); if(confCb) confCb(); confCb=null; };
+window.confNo   = function () { G('cConfirm').classList.remove('open'); confCb=null; };
 
 window.openModal  = function (id) { G(id).classList.add('open'); };
 window.closeModal = function (id) { G(id).classList.remove('open'); };
 
 document.querySelectorAll('.mbg').forEach(m =>
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); })
+  m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); })
 );
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape')
+  if (e.key==='Escape')
     document.querySelectorAll('.mbg.open,.cbg.open').forEach(m => m.classList.remove('open'));
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && G('scLogin').classList.contains('active')) window.doLogin();
+  if (e.key==='Enter' && G('scLogin').classList.contains('active')) window.doLogin();
 });
 
 function fmt(n) {
-  return '₺' + Number(n||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2});
+  return '₺'+Number(n||0).toLocaleString('tr-TR',{minimumFractionDigits:0,maximumFractionDigits:2});
 }
 function today() { return new Date().toISOString().split('T')[0]; }
 function dateStr(d) {
   try { return new Date((d||today())+'T12:00:00').toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
-  catch (e) { return d||''; }
+  catch(e) { return d||''; }
 }
-function isToday(d)    { return d === today(); }
-function isThisWeek(d) {
-  const now = new Date(), day = now.getDay();
-  const mon = new Date(now); mon.setDate(now.getDate()-(day===0?6:day-1)); mon.setHours(0,0,0,0);
-  const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
-  const dt  = new Date(d+'T12:00:00');
-  return dt >= mon && dt <= sun;
+function isToday(d)     { return d===today(); }
+function isThisWeek(d)  {
+  const now=new Date(), day=now.getDay();
+  const mon=new Date(now); mon.setDate(now.getDate()-(day===0?6:day-1)); mon.setHours(0,0,0,0);
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+  const dt=new Date(d+'T12:00:00'); return dt>=mon&&dt<=sun;
 }
 function isThisMonth(d) {
-  const n = new Date(), dt = new Date(d+'T12:00:00');
-  return dt.getMonth()===n.getMonth() && dt.getFullYear()===n.getFullYear();
+  const n=new Date(), dt=new Date(d+'T12:00:00');
+  return dt.getMonth()===n.getMonth()&&dt.getFullYear()===n.getFullYear();
 }
-function uid() { return Date.now() + Math.floor(Math.random()*99999); }
+function uid() { return Date.now()+Math.floor(Math.random()*99999); }
 
 /* ══════════════════════════════════════
    BAKİYE HESAPLAMA
 ══════════════════════════════════════ */
 function recalc() {
-  let n = 0, bk = 0;
+  let n=0, bk=0;
   [...S.bakiyeIslemleri]
-    .sort((a,b) => String(a.tarih||'').localeCompare(String(b.tarih||'')) || (a.id-b.id))
+    .sort((a,b)=>String(a.tarih||'').localeCompare(String(b.tarih||''))||(a.id-b.id))
     .forEach(op => {
-      const h = op.hesap === 'nakit';
-      if      (op.tip==='ekle')   h ? (n+=op.tutar)  : (bk+=op.tutar);
-      else if (op.tip==='cikar')  h ? (n-=op.tutar)  : (bk-=op.tutar);
-      else if (op.tip==='ayarla') h ? (n=op.tutar)   : (bk=op.tutar);
+      const h=op.hesap==='nakit';
+      if      (op.tip==='ekle')   h?(n+=op.tutar):(bk+=op.tutar);
+      else if (op.tip==='cikar')  h?(n-=op.tutar):(bk-=op.tutar);
+      else if (op.tip==='ayarla') h?(n=op.tutar):(bk=op.tutar);
     });
-  S.giderler.forEach(g => g.hesap==='nakit' ? (n-=g.tutar):(bk-=g.tutar));
+  S.giderler.forEach(g  => g.hesap==='nakit'?(n-=g.tutar):(bk-=g.tutar));
   S.islemler.filter(i=>i.tip==='gelir').forEach(i => i.hesap==='nakit'?(n+=i.tutar):(bk+=i.tutar));
-  S.nakit = Math.round(n*100)/100;
-  S.banka = Math.round(bk*100)/100;
+  S.nakit=Math.round(n*100)/100;
+  S.banka=Math.round(bk*100)/100;
 }
 
 /* ══════════════════════════════════════
    UI GÜNCELLEME
 ══════════════════════════════════════ */
 function updateAll() {
-  const bek = S.organizasyonlar.filter(o=>o.durum==='vadeli').reduce((s,o)=>s+(o.ucret||0),0);
-  const tah = S.organizasyonlar.filter(o=>o.durum==='tahsil').reduce((s,o)=>s+(o.ucret||0),0);
-  const gid = S.giderler.reduce((s,g)=>s+(g.tutar||0),0);
-  const net = tah - gid;
-
-  ['hNakit','mNakit','bNakit'].forEach(id => txt(id, fmt(S.nakit)));
-  ['hBanka','mBanka','bBanka'].forEach(id => txt(id, fmt(S.banka)));
-  txt('mBeklenen', fmt(bek)); txt('mGider', fmt(gid)); txt('mTahsil', fmt(tah));
-
-  const ne = G('mNet');
-  if (ne) { ne.textContent = fmt(net); ne.className = 'stat-v ' + (net>=0?'g':'r'); }
-
+  const bek=S.organizasyonlar.filter(o=>o.durum==='vadeli').reduce((s,o)=>s+(o.ucret||0),0);
+  const tah=S.organizasyonlar.filter(o=>o.durum==='tahsil').reduce((s,o)=>s+(o.ucret||0),0);
+  const gid=S.giderler.reduce((s,g)=>s+(g.tutar||0),0);
+  const net=tah-gid;
+  ['hNakit','mNakit','bNakit'].forEach(id=>txt(id,fmt(S.nakit)));
+  ['hBanka','mBanka','bBanka'].forEach(id=>txt(id,fmt(S.banka)));
+  txt('mBeklenen',fmt(bek)); txt('mGider',fmt(gid)); txt('mTahsil',fmt(tah));
+  const ne=G('mNet'); if(ne){ ne.textContent=fmt(net); ne.className='stat-v '+(net>=0?'g':'r'); }
   renderBugun(); renderSon(); renderGGrid(); renderGList();
   renderOList(); renderGecmis(); renderBList(); renderCal();
 }
 
 /* ── NAVİGASYON ── */
 window.navTo = function (id) {
-  document.querySelectorAll('.sec').forEach(s => s.classList.remove('on'));
-  const s = G(id); if (s) s.classList.add('on');
-  document.querySelectorAll('.sb-item').forEach(n =>
-    n.classList.toggle('on', n.getAttribute('onclick') === "navTo('"+id+"')")
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  const s=G(id); if(s) s.classList.add('on');
+  document.querySelectorAll('.sb-item').forEach(n=>
+    n.classList.toggle('on', n.getAttribute('onclick')==="navTo('"+id+"')")
   );
-  document.querySelectorAll('.mni').forEach(n =>
-    n.classList.toggle('on', n.getAttribute('onclick') === "navTo('"+id+"')")
+  document.querySelectorAll('.mni').forEach(n=>
+    n.classList.toggle('on', n.getAttribute('onclick')==="navTo('"+id+"')")
   );
-  if (id === 'secOrg') renderCal();
+  if(id==='secOrg') renderCal();
 };
 
 /* ══════════════════════════════════════
    BAKİYE CRUD
 ══════════════════════════════════════ */
 window.openBakModal = function (hesap, id) {
-  editBH = hesap; editBId = id || null;
-  const lbl = hesap==='nakit' ? 'Nakit (Kasa)' : 'Banka Hesabı';
+  editBH=hesap; editBId=id||null;
+  const lbl=hesap==='nakit'?'Nakit (Kasa)':'Banka Hesabı';
   if (id) {
-    const b = S.bakiyeIslemleri.find(x=>x.id===id); if(!b) return;
-    txt('mbT','Bakiye İşlemi Düzenle'); txt('mbS', lbl);
+    const b=S.bakiyeIslemleri.find(x=>x.id===id); if(!b) return;
+    txt('mbT','Bakiye İşlemi Düzenle'); txt('mbS',lbl);
     G('bTarih').value=b.tarih; G('bTutar').value=b.tutar; G('bAcik').value=b.aciklama||'';
-    const r = document.querySelector('input[name=bTip][value='+b.tip+']'); if(r) r.checked=true;
+    const r=document.querySelector('input[name=bTip][value='+b.tip+']'); if(r) r.checked=true;
   } else {
-    txt('mbT','Bakiye İşlemi Ekle'); txt('mbS', lbl+' · Mevcut: '+fmt(S[hesap]));
+    txt('mbT','Bakiye İşlemi Ekle'); txt('mbS',lbl+' · Mevcut: '+fmt(S[hesap]));
     G('bTarih').value=today(); G('bTutar').value=''; G('bAcik').value='';
     document.querySelector('input[name=bTip][value=ekle]').checked=true;
   }
   openModal('mBakiye');
-  setTimeout(() => G('bTutar').focus(), 130);
+  setTimeout(()=>G('bTutar').focus(),130);
 };
 
 window.kaydetBakiye = function () {
-  const tutar = parseFloat(G('bTutar').value);
-  const tarih = G('bTarih').value;
-  const aciklama = G('bAcik').value.trim();
-  const tip = document.querySelector('input[name=bTip]:checked').value;
-  if (!tutar||tutar<=0||!tarih) { toast('Tarih ve tutar zorunludur','error'); return; }
-  if (editBId) {
-    const b = S.bakiyeIslemleri.find(x=>x.id===editBId);
-    if (b) Object.assign(b,{tutar,tarih,aciklama,tip,hesap:editBH});
+  const tutar=parseFloat(G('bTutar').value), tarih=G('bTarih').value;
+  const aciklama=G('bAcik').value.trim();
+  const tip=document.querySelector('input[name=bTip]:checked').value;
+  if(!tutar||tutar<=0||!tarih){ toast('Tarih ve tutar zorunludur','error'); return; }
+  if(editBId){
+    const b=S.bakiyeIslemleri.find(x=>x.id===editBId);
+    if(b) Object.assign(b,{tutar,tarih,aciklama,tip,hesap:editBH});
     toast('Bakiye işlemi güncellendi','success');
   } else {
     S.bakiyeIslemleri.unshift({id:uid(),hesap:editBH,tip,tutar,tarih,aciklama});
@@ -1623,27 +1612,27 @@ window.kaydetBakiye = function () {
 };
 
 window.silBakiye = function (id) {
-  const b = S.bakiyeIslemleri.find(x=>x.id===id); if(!b) return;
-  const ta = {ekle:'Ekleme',cikar:'Çıkarma',ayarla:'Ayarlama'};
-  conf('Bakiye İşlemini Sil', '"'+(b.aciklama||ta[b.tip])+'" — '+fmt(b.tutar)+' silinecek.', 'Sil', ()=>{
-    S.bakiyeIslemleri = S.bakiyeIslemleri.filter(x=>x.id!==id);
+  const b=S.bakiyeIslemleri.find(x=>x.id===id); if(!b) return;
+  const ta={ekle:'Ekleme',cikar:'Çıkarma',ayarla:'Ayarlama'};
+  conf('Bakiye İşlemini Sil','"'+(b.aciklama||ta[b.tip])+'" — '+fmt(b.tutar)+' silinecek.','Sil',()=>{
+    S.bakiyeIslemleri=S.bakiyeIslemleri.filter(x=>x.id!==id);
     recalc(); updateAll(); sched(); toast('Silindi','success');
   });
 };
 
-window.setBakF = function (f, btn) {
+window.setBakF = function (f,btn) {
   fBak=f;
   document.querySelectorAll('#secBakiye .ftab').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on'); renderBList();
 };
 function renderBList() {
-  const el = G('elBak'); if(!el) return;
-  const list = (S.bakiyeIslemleri||[]).filter(b =>
+  const el=G('elBak'); if(!el) return;
+  const list=(S.bakiyeIslemleri||[]).filter(b=>
     fBak==='nakit'?b.hesap==='nakit':fBak==='banka'?b.hesap==='banka':true
   );
-  if (!list.length) { el.innerHTML='<div class="empty">Henüz bakiye işlemi yok</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="empty">Henüz bakiye işlemi yok</div>'; return; }
   const ti={ekle:'➕',cikar:'➖',ayarla:'⚙️'}, tc={ekle:'pos',cikar:'neg',ayarla:'b'}, ta={ekle:'Ekleme',cikar:'Çıkarma',ayarla:'Ayarlama'};
-  el.innerHTML = list.map(b=>`<div class="li">
+  el.innerHTML=list.map(b=>`<div class="li">
     <div class="li-i">
       <div class="li-t">${ti[b.tip]||''} ${b.aciklama||ta[b.tip]} <span class="badge ${b.hesap==='nakit'?'bbl':'bt'}">${b.hesap==='nakit'?'Nakit':'Banka'}</span></div>
       <div class="li-s">${dateStr(b.tarih)} · ${ta[b.tip]}</div>
@@ -1662,10 +1651,10 @@ function renderBList() {
    KATEGORİ CRUD
 ══════════════════════════════════════ */
 function renderGGrid() {
-  const el = G('gGrid'); if(!el) return;
-  let h = S.kategoriler.map((k,i) => `
+  const el=G('gGrid'); if(!el) return;
+  let h=S.kategoriler.map((k,i)=>`
     <div style="background:var(--d2);border:1px solid var(--d4);border-radius:var(--r);padding:11px 8px;text-align:center;cursor:pointer;transition:all .12s;position:relative;user-select:none"
-         onclick="openGiderModal(null,'${k.ad.replace(/'/g,"\\'")}','${k.icon}')"
+         onclick="openGiderModal(null,'${k.ad.replace(/'/g,"\'")}','${k.icon}')"
          onmouseenter="this.style.borderColor='var(--d5)'"
          onmouseleave="this.style.borderColor='var(--d4)'">
       <div style="position:absolute;top:4px;right:3px;display:none;gap:2px" class="gc-aa">
@@ -1675,25 +1664,22 @@ function renderGGrid() {
       <span style="font-size:18px;display:block;margin-bottom:5px">${k.icon}</span>
       <span style="font-size:10.5px;font-weight:500;color:var(--t2)">${k.ad}</span>
     </div>`).join('');
-  h += `<div style="background:transparent;border:1px dashed var(--d5);border-radius:var(--r);padding:11px 8px;text-align:center;cursor:pointer;transition:all .12s" onclick="openKatModal()" onmouseenter="this.style.borderColor='var(--green)'" onmouseleave="this.style.borderColor='var(--d5)'">
+  h+=`<div style="background:transparent;border:1px dashed var(--d5);border-radius:var(--r);padding:11px 8px;text-align:center;cursor:pointer;transition:all .12s" onclick="openKatModal()" onmouseenter="this.style.borderColor='var(--green)'" onmouseleave="this.style.borderColor='var(--d5)'">
     <span style="font-size:18px;display:block;margin-bottom:5px;color:var(--t3)">➕</span>
     <span style="font-size:10.5px;font-weight:500;color:var(--t3)">Yeni Kategori</span>
   </div>`;
-  el.innerHTML = h;
-
-  // hover ile gc-aa göster
-  el.querySelectorAll('div[onmouseenter]').forEach(gc => {
-    const aa = gc.querySelector('.gc-aa');
-    if (!aa) return;
-    gc.addEventListener('mouseenter', () => aa.style.display='flex');
-    gc.addEventListener('mouseleave', () => aa.style.display='none');
+  el.innerHTML=h;
+  el.querySelectorAll('div[onmouseenter]').forEach(gc=>{
+    const aa=gc.querySelector('.gc-aa'); if(!aa) return;
+    gc.addEventListener('mouseenter',()=>aa.style.display='flex');
+    gc.addEventListener('mouseleave',()=>aa.style.display='none');
   });
 }
 
 window.openKatModal = function (idx) {
-  editKatI = (idx!==undefined&&idx!==null) ? Number(idx) : null;
-  if (editKatI!==null) {
-    const k = S.kategoriler[editKatI]; if(!k) return;
+  editKatI=(idx!==undefined&&idx!==null)?Number(idx):null;
+  if(editKatI!==null){
+    const k=S.kategoriler[editKatI]; if(!k) return;
     txt('mkT','Kategori Düzenle'); G('katAd').value=k.ad; G('katIkon').value=k.icon;
   } else {
     txt('mkT','Yeni Kategori'); G('katAd').value=''; G('katIkon').value='📌';
@@ -1702,8 +1688,8 @@ window.openKatModal = function (idx) {
 };
 window.kaydetKat = function () {
   const ad=G('katAd').value.trim(), icon=G('katIkon').value.trim()||'📌';
-  if (!ad) { toast('Kategori adı girin','error'); return; }
-  if (editKatI!==null) {
+  if(!ad){ toast('Kategori adı girin','error'); return; }
+  if(editKatI!==null){
     const eski=S.kategoriler[editKatI].ad; S.kategoriler[editKatI]={ad,icon};
     S.giderler.forEach(g=>{ if(g.kat===eski) g.kat=ad; });
     toast('Kategori güncellendi','success');
@@ -1714,8 +1700,8 @@ window.silKat = function (idx) {
   const k=S.kategoriler[idx]; if(!k) return;
   const n=S.giderler.filter(g=>g.kat===k.ad).length;
   conf('Kategoriyi Sil',
-    n>0 ? `"${k.ad}" ${n} gider kaydında kullanılıyor. Yine de silinsin mi?` : `"${k.ad}" silinecek.`,
-    'Sil', () => { S.kategoriler.splice(idx,1); renderGGrid(); sched(); toast('Kategori silindi','success'); }
+    n>0?`"${k.ad}" ${n} gider kaydında kullanılıyor. Yine de silinsin mi?`:`"${k.ad}" silinecek.`,
+    'Sil',()=>{ S.kategoriler.splice(idx,1); renderGGrid(); sched(); toast('Kategori silindi','success'); }
   );
 };
 
@@ -1723,9 +1709,9 @@ window.silKat = function (idx) {
    GİDER CRUD
 ══════════════════════════════════════ */
 window.openGiderModal = function (id, kat, icon) {
-  editGId = id||null;
-  if (id) {
-    const g=S.giderler.find(x=>x.id===id); if(!g) return;
+  editGId=(id!==null&&id!==undefined&&id!=='null')?id:null;
+  if(editGId){
+    const g=S.giderler.find(x=>String(x.id)===String(editGId)); if(!g) return;
     txt('mgT','Gideri Düzenle'); txt('mgS',g.kat);
     G('gTarih').value=g.tarih; G('gTutar').value=g.tutar; G('gAcik').value=g.aciklama||'';
     const r=document.querySelector('input[name=gHesap][value='+g.hesap+']'); if(r) r.checked=true;
@@ -1740,13 +1726,13 @@ window.openGiderModal = function (id, kat, icon) {
 window.kaydetGider = function () {
   const tutar=parseFloat(G('gTutar').value), tarih=G('gTarih').value;
   const aciklama=G('gAcik').value.trim(), hesap=document.querySelector('input[name=gHesap]:checked').value;
-  if (!tutar||tutar<=0||!tarih) { toast('Tarih ve tutar zorunludur','error'); return; }
-  if (editGId) {
-    const g=S.giderler.find(x=>x.id===editGId);
-    if (g) {
+  if(!tutar||tutar<=0||!tarih){ toast('Tarih ve tutar zorunludur','error'); return; }
+  if(editGId){
+    const g=S.giderler.find(x=>String(x.id)===String(editGId));
+    if(g){
       Object.assign(g,{tutar,tarih,aciklama,hesap});
-      const il=S.islemler.find(x=>x.refId===editGId&&x.tip==='gider');
-      if (il) Object.assign(il,{tutar,tarih,hesap,aciklama:g.kat+(aciklama?' — '+aciklama:'')});
+      const il=S.islemler.find(x=>String(x.refId)===String(editGId)&&x.tip==='gider');
+      if(il) Object.assign(il,{tutar,tarih,hesap,aciklama:g.kat+(aciklama?' — '+aciklama:'')});
     }
     toast('Gider güncellendi','success');
   } else {
@@ -1758,16 +1744,16 @@ window.kaydetGider = function () {
   recalc(); closeModal('mGider'); updateAll(); sched();
 };
 window.silGider = function (id) {
-  const g=S.giderler.find(x=>x.id===id); if(!g) return;
+  const g=S.giderler.find(x=>String(x.id)===String(id)); if(!g) return;
   conf('Gideri Sil','"'+g.kat+'" — '+fmt(g.tutar)+' silinecek.','Sil',()=>{
-    S.giderler=S.giderler.filter(x=>x.id!==id);
-    S.islemler=S.islemler.filter(x=>x.refId!==id);
+    S.giderler=S.giderler.filter(x=>String(x.id)!==String(id));
+    S.islemler=S.islemler.filter(x=>String(x.refId)!==String(id));
     recalc(); updateAll(); sched(); toast('Gider silindi','success');
   });
 };
 function renderGList() {
   const el=G('elGider'); if(!el) return;
-  if (!S.giderler.length) { el.innerHTML='<div class="empty">Henüz gider yok</div>'; return; }
+  if(!S.giderler.length){ el.innerHTML='<div class="empty">Henüz gider yok</div>'; return; }
   el.innerHTML=S.giderler.map(g=>`<div class="li">
     <div class="li-i"><div class="li-t">${g.kat}${g.aciklama?' — '+g.aciklama:''}</div><div class="li-s">${dateStr(g.tarih)} · ${g.hesap==='nakit'?'💵 Nakit':'🏦 Banka'}</div></div>
     <div class="li-r"><span class="amt neg">-${fmt(g.tutar)}</span><div class="la"><button class="btn btn-warn btn-sm btn-ic" onclick="openGiderModal(${g.id})" title="Düzenle">✏️</button><button class="btn btn-danger btn-sm btn-ic" onclick="silGider(${g.id})" title="Sil">🗑️</button></div></div>
@@ -1785,7 +1771,7 @@ window.toggleOUI = function (el) {
 };
 window.openOrgModal = function (id) {
   editOId=id||null;
-  if (id) {
+  if(id){
     const o=S.organizasyonlar.find(x=>x.id===id); if(!o) return;
     txt('moT','Organizasyonu Düzenle');
     G('oTarih').value=o.tarih; G('oSaat').value=o.saat||'';
@@ -1809,18 +1795,18 @@ window.openOrgModal = function (id) {
   }
   openModal('mOrg');
 };
-window.cakismaNo  = function () { G('cCakisma').classList.remove('open'); pendOrg=null; };
-window.cakismaYes = function () { G('cCakisma').classList.remove('open'); if(pendOrg){ saveOrg(pendOrg); pendOrg=null; } };
-window.kaydetOrg  = function () {
+window.cakismaNo  = function(){ G('cCakisma').classList.remove('open'); pendOrg=null; };
+window.cakismaYes = function(){ G('cCakisma').classList.remove('open'); if(pendOrg){ saveOrg(pendOrg); pendOrg=null; } };
+window.kaydetOrg  = function(){
   const tarih=G('oTarih').value, saat=G('oSaat').value.trim();
   const aciklama=G('oAcik').value.trim()||'Organizasyon';
   const kisi=parseInt(G('oKisi').value)||0, ucret=parseFloat(G('oUcret').value);
   const ikram=document.querySelector('input[name=oIkram]:checked').value;
   const odeme=document.querySelector('input[name=oOdeme]:checked').value;
-  if (!tarih||!ucret||ucret<=0) { toast('Tarih ve ücret zorunludur','error'); return; }
-  if (!editOId&&saat) {
+  if(!tarih||!ucret||ucret<=0){ toast('Tarih ve ücret zorunludur','error'); return; }
+  if(!editOId&&saat){
     const cx=S.organizasyonlar.filter(o=>o.tarih===tarih&&o.saat===saat);
-    if (cx.length) {
+    if(cx.length){
       txt('cakismaMsg',dateStr(tarih)+' '+saat+' için zaten organizasyon mevcut!');
       G('cakismaDet').innerHTML=cx.map(o=>`<div>• <b>${o.aciklama}</b> — ${o.saat} (${fmt(o.ucret)})</div>`).join('');
       pendOrg={tarih,saat,aciklama,kisi,ucret,ikram,odeme};
@@ -1829,27 +1815,27 @@ window.kaydetOrg  = function () {
   }
   saveOrg({tarih,saat,aciklama,kisi,ucret,ikram,odeme});
 };
-function saveOrg(data) {
-  const {tarih,saat,aciklama,kisi,ucret,ikram,odeme}=data;
-  if (editOId) {
+function saveOrg(data){
+  const{tarih,saat,aciklama,kisi,ucret,ikram,odeme}=data;
+  if(editOId){
     const o=S.organizasyonlar.find(x=>x.id===editOId); if(!o) return;
     S.islemler=S.islemler.filter(x=>x.refId!==editOId);
     let hesap=null,kapora=0,kaporaHesap=null;
     const durum=odeme==='pesin'?'tahsil':'vadeli';
-    if (odeme==='pesin'){ hesap=document.querySelector('input[name=oHesap]:checked').value; S.islemler.unshift({id:uid(),tip:'gelir',aciklama:aciklama+' (Peşin)',tutar:ucret,hesap,tarih,refId:editOId}); }
-    else { kapora=parseFloat(G('oKapora').value)||0; if(kapora>0){ kaporaHesap=document.querySelector('input[name=kHesap]:checked').value; S.islemler.unshift({id:uid(),tip:'gelir',aciklama:aciklama+' — Kapora',tutar:kapora,hesap:kaporaHesap,tarih,refId:editOId}); } }
+    if(odeme==='pesin'){ hesap=document.querySelector('input[name=oHesap]:checked').value; S.islemler.unshift({id:uid(),tip:'gelir',aciklama:aciklama+' (Peşin)',tutar:ucret,hesap,tarih,refId:editOId}); }
+    else{ kapora=parseFloat(G('oKapora').value)||0; if(kapora>0){ kaporaHesap=document.querySelector('input[name=kHesap]:checked').value; S.islemler.unshift({id:uid(),tip:'gelir',aciklama:aciklama+' — Kapora',tutar:kapora,hesap:kaporaHesap,tarih,refId:editOId}); } }
     Object.assign(o,{tarih,saat,aciklama,kisi,ikram,ucret,kapora,kaporaHesap,durum,hesap});
     toast('Organizasyon güncellendi','success');
   } else {
     const id=uid(); let hesap=null,kapora=0,kaporaHesap=null;
-    if (odeme==='pesin'){ hesap=document.querySelector('input[name=oHesap]:checked').value; S.islemler.unshift({id:uid(),tip:'gelir',aciklama:aciklama+' (Peşin)',tutar:ucret,hesap,tarih,refId:id}); }
-    else { kapora=parseFloat(G('oKapora').value)||0; if(kapora>0){ kaporaHesap=document.querySelector('input[name=kHesap]:checked').value; S.islemler.unshift({id:uid(),tip:'gelir',aciklama:aciklama+' — Kapora',tutar:kapora,hesap:kaporaHesap,tarih,refId:id}); } }
+    if(odeme==='pesin'){ hesap=document.querySelector('input[name=oHesap]:checked').value; S.islemler.unshift({id:uid(),tip:'gelir',aciklama:aciklama+' (Peşin)',tutar:ucret,hesap,tarih,refId:id}); }
+    else{ kapora=parseFloat(G('oKapora').value)||0; if(kapora>0){ kaporaHesap=document.querySelector('input[name=kHesap]:checked').value; S.islemler.unshift({id:uid(),tip:'gelir',aciklama:aciklama+' — Kapora',tutar:kapora,hesap:kaporaHesap,tarih,refId:id}); } }
     S.organizasyonlar.unshift({id,tarih,saat,aciklama,kisi,ikram,ucret,kapora,kaporaHesap,durum:odeme==='pesin'?'tahsil':'vadeli',hesap});
     toast(odeme==='pesin'?'Organizasyon eklendi':kapora>0?'Vadeli, kapora eklendi':'Vadeli kaydedildi','success');
   }
   recalc(); closeModal('mOrg'); updateAll(); sched();
 }
-window.silOrg = function (id) {
+window.silOrg = function(id){
   const o=S.organizasyonlar.find(x=>x.id===id); if(!o) return;
   conf('Organizasyonu Sil','"'+o.aciklama+'" ('+dateStr(o.tarih)+') silinecek.','Sil',()=>{
     S.organizasyonlar=S.organizasyonlar.filter(x=>x.id!==id);
@@ -1857,14 +1843,14 @@ window.silOrg = function (id) {
     recalc(); updateAll(); sched(); toast('Organizasyon silindi','success');
   });
 };
-window.openTahsilat = function (id) {
+window.openTahsilat = function(id){
   aktifOrgId=id; const o=S.organizasyonlar.find(x=>x.id===id); if(!o) return;
   const kalan=o.ucret-(o.kapora||0);
   txt('tahInfo',o.aciklama+' · Toplam: '+fmt(o.ucret)+((o.kapora||0)>0?' · Kapora: '+fmt(o.kapora)+' · Kalan: '+fmt(kalan):''));
   document.querySelector('input[name=tHesap][value=nakit]').checked=true;
   openModal('mTahsilat');
 };
-window.tahsilatAl = function () {
+window.tahsilatAl = function(){
   const o=S.organizasyonlar.find(x=>x.id===aktifOrgId); if(!o) return;
   const hesap=document.querySelector('input[name=tHesap]:checked').value;
   const kalan=o.ucret-(o.kapora||0), miktar=kalan>0?kalan:o.ucret;
@@ -1874,30 +1860,30 @@ window.tahsilatAl = function () {
 };
 
 /* ── PANEL RENDER ── */
-function renderBugun() {
+function renderBugun(){
   const el=G('elBugun'); if(!el) return;
   const list=S.organizasyonlar.filter(o=>o.durum==='vadeli'&&o.tarih<=today());
-  if (!list.length) { el.innerHTML='<div class="empty">Vadesi gelen kayıt yok</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="empty">Vadesi gelen kayıt yok</div>'; return; }
   el.innerHTML=list.map(o=>`<div class="arow li">
     <div class="li-i"><div class="li-t">${o.aciklama} <span class="badge bb">${o.tarih<today()?'VADESİ GEÇTİ':'BUGÜN VADELİ'}</span></div>
     <div class="li-s">${dateStr(o.tarih)}${o.saat?' · 🕐 '+o.saat:''} · ${o.kisi} kişi${(o.kapora||0)>0?' · Kapora: '+fmt(o.kapora):''}</div></div>
     <div class="li-r"><span class="amt pnd">${fmt(o.ucret)}</span><button class="btn btn-success btn-sm" onclick="openTahsilat(${o.id})">Tahsil Et</button></div>
   </div>`).join('');
 }
-function renderSon() {
+function renderSon(){
   const el=G('elSon'); if(!el) return;
   const list=S.islemler.slice(0,6);
-  if (!list.length) { el.innerHTML='<div class="empty">Henüz işlem yok</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="empty">Henüz işlem yok</div>'; return; }
   el.innerHTML=list.map(i=>`<div class="li">
     <div class="li-i"><div class="li-t">${i.aciklama}</div><div class="li-s">${dateStr(i.tarih)} · ${i.hesap==='nakit'?'💵 Nakit':'🏦 Banka'}</div></div>
     <span class="amt ${i.tip==='gelir'?'pos':'neg'}">${i.tip==='gider'?'-':'+'}${fmt(i.tutar)}</span>
   </div>`).join('');
 }
-window.setOrgF = function (f,btn) { fOrg=f; document.querySelectorAll('#secOrg .ftab').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); renderOList(); };
-function renderOList() {
+window.setOrgF = function(f,btn){ fOrg=f; document.querySelectorAll('#secOrg .ftab').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); renderOList(); };
+function renderOList(){
   const el=G('elOrg'); if(!el) return;
   const list=S.organizasyonlar.filter(o=>fOrg==='vadeli'?o.durum==='vadeli':fOrg==='tahsil'?o.durum==='tahsil':true);
-  if (!list.length) { el.innerHTML='<div class="empty">Kayıt bulunamadı</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="empty">Kayıt bulunamadı</div>'; return; }
   el.innerHTML=list.map(o=>{
     const badge=o.durum==='tahsil'?'<span class="badge bt">Tahsil Edildi</span>':o.tarih<today()?'<span class="badge bb">Vadesi Geçti</span>':o.tarih===today()?'<span class="badge bb">Bugün Vadeli</span>':'<span class="badge bv">Vadeli</span>';
     const kalan=o.ucret-(o.kapora||0);
@@ -1908,11 +1894,11 @@ function renderOList() {
     </div>`;
   }).join('');
 }
-window.setGecF = function (f,btn) { fGec=f; document.querySelectorAll('#secGecmis .ftab').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); renderGecmis(); };
-function renderGecmis() {
+window.setGecF = function(f,btn){ fGec=f; document.querySelectorAll('#secGecmis .ftab').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); renderGecmis(); };
+function renderGecmis(){
   const el=G('elGecmis'); if(!el) return;
   const list=S.islemler.filter(i=>fGec==='bugun'?isToday(i.tarih):fGec==='hafta'?isThisWeek(i.tarih):fGec==='ay'?isThisMonth(i.tarih):fGec==='gelir'?i.tip==='gelir':fGec==='gider'?i.tip==='gider':true);
-  if (!list.length) { el.innerHTML='<div class="empty">Bu dönemde işlem yok</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="empty">Bu dönemde işlem yok</div>'; return; }
   el.innerHTML=list.map(i=>`<div class="li">
     <div class="li-i"><div class="li-t">${i.aciklama}</div><div class="li-s">${dateStr(i.tarih)} · ${i.tip==='gelir'?'📥 Gelir':'📤 Gider'} · ${i.hesap==='nakit'?'💵 Nakit':'🏦 Banka'}</div></div>
     <span class="amt ${i.tip==='gelir'?'pos':'neg'}">${i.tip==='gider'?'-':'+'}${fmt(i.tutar)}</span>
@@ -1936,8 +1922,8 @@ function renderCal(){
   for(let i=dow-1;i>=0;i--) h+='<div class="cd om">'+(prev-i)+'</div>';
   for(let d=1;d<=dim;d++){
     const dk=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const isT=dk===ts,hasO=(bd[dk]||[]).length>0;
-    h+=`<div class="cd${isT?' td':''}${hasO?' ho':''}" ${hasO?'onclick="calClick(\''+dk+'\')"':''}>${d}${hasO?'<span class="dot"></span>':''}</div>`;
+    const isT=dk===ts, hasO=(bd[dk]||[]).length>0;
+    h+=`<div class="cd${isT?' td':''}${hasO?' ho':''}" ${hasO?'onclick="calClick(''+dk+'')"':''}>${d}${hasO?'<span class="dot"></span>':''}</div>`;
   }
   const rem=((dow+dim)%7===0)?0:7-(dow+dim)%7;
   for(let d=1;d<=rem;d++) h+='<div class="cd om">'+d+'</div>';
