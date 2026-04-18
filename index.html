@@ -1923,7 +1923,7 @@ function renderCal(){
   for(let d=1;d<=dim;d++){
     const dk=calY+'-'+String(calM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const isT=dk===ts, hasO=(bd[dk]||[]).length>0;
-    h+=`<div class="cd${isT?' td':''}${hasO?' ho':''}" ${hasO?'onclick="calClick(''+dk+'')"':''}>${d}${hasO?'<span class="dot"></span>':''}</div>`;
+    h+=`<div class="cd${isT?' td':''}${hasO?' ho':''}" ${hasO?`onclick="calClick('${dk}')"`:''}>${d}${hasO?'<span class="dot"></span>':''}</div>`;
   }
   const rem=((dow+dim)%7===0)?0:7-(dow+dim)%7;
   for(let d=1;d<=rem;d++) h+='<div class="cd om">'+d+'</div>';
