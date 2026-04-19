@@ -337,15 +337,15 @@ body{font-family:'Inter',sans-serif;background:var(--d1);color:var(--t1);min-hei
       <!-- KATEGORİLER -->
       <section id="secGider" class="sec">
         <div class="stitle">Kategoriler</div>
-        <div class="ssub">Kategori ekle, düzenle veya sil</div>
+        <div class="ssub">Bir kategoriye tıklayarak gider ekleyin</div>
 
-        <!-- KATEGORİ KARTLARI — tıkla → gider ekle -->
+        <!-- KATEGORİ KARTLARI -->
         <div class="panel">
           <div class="ph"><div class="pt">📂 Kategoriye Tıkla → Gider Ekle</div></div>
           <div class="kat-grid" id="katGrid"></div>
         </div>
 
-        <!-- GİDER GEÇMİŞİ -->
+        <!-- GİDER GEÇMİŞİ (tüm kategoriler) -->
         <div class="panel">
           <div class="ph">
             <div class="pt">📋 Gider Geçmişi</div>
@@ -361,6 +361,35 @@ body{font-family:'Inter',sans-serif;background:var(--d1);color:var(--t1);min-hei
             <button class="btn btn-ghost btn-sm" onclick="katYeniEkle()" style="font-size:11px">+ Yeni Kategori</button>
           </div>
           <div id="katYonetimList"></div>
+        </div>
+      </section>
+
+      <!-- KATEGORİ DETAY SAYFASI -->
+      <section id="secKatDetay" class="sec">
+        <!-- Başlık + geri butonu -->
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+          <button onclick="window.navTo('secGider')" style="background:rgba(255,255,255,.07);border:1px solid var(--d4);border-radius:var(--r);color:var(--t2);padding:6px 12px;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .13s" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">← Geri</button>
+          <div class="stitle" id="katDetayBaslik" style="margin-bottom:0">Kategori</div>
+        </div>
+        <div class="ssub" id="katDetaySsub">Kategori giderleri</div>
+
+        <!-- Özet kart -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="stat"><div class="stat-l">Toplam Gider</div><div class="stat-v r" id="katDetayToplam">₺0</div></div>
+          <div class="stat"><div class="stat-l">İşlem Sayısı</div><div class="stat-v v" id="katDetaySayi">0</div></div>
+        </div>
+
+        <!-- Gider ekle butonu -->
+        <div style="margin-bottom:14px">
+          <button class="btn btn-primary" onclick="window.katDetayGiderEkle()" style="width:100%;padding:12px;font-size:14px">
+            + Gider Ekle
+          </button>
+        </div>
+
+        <!-- Bu kategoriye ait giderler -->
+        <div class="panel">
+          <div class="ph"><div class="pt" id="katDetayListBaslik">Giderler</div></div>
+          <div id="elKatDetayList"><div class="empty">Henüz gider yok</div></div>
         </div>
       </section>
 
@@ -1387,7 +1416,7 @@ function updateAll() {
   txt('mToplamGider', fmt(gid));
   const ne = G('mNet');
   if (ne) { ne.textContent = fmt(net); ne.className = 'stat-v ' + (net >= 0 ? 'g' : 'r'); }
-  renderBugun(); renderSon(); renderKatGrid(); renderGList();
+  renderBugun(); renderSon(); renderKatGrid(); renderGList(); renderKatDetayList();
   renderOList(); renderGecmis(); renderBList(); renderCal();
 }
 
@@ -1539,11 +1568,96 @@ window.katYeniEkle = function()  { window.openKatModal(null); };
    Bakiye anında düşer, silince geri eklenir.
 ══════════════════════════════════════ */
 
-/* katSec — kategori kartının onclick="katSec(i)" çağırır */
+/* ── Aktif kategori (detay sayfası için) ── */
+let aktifKat = null;
+
+/* katSec — kategori kartına tıklayınca detay sayfasına git */
 window.katSec = function(i) {
   const k = S.kategoriler[i];
   if (!k) return;
-  window.openGiderModal(k.ad, k.icon);
+  aktifKat = k;
+  // Başlıkları güncelle
+  txt('katDetayBaslik', k.icon + '  ' + k.ad);
+  txt('katDetaySsub', k.ad + ' kategorisine ait giderler');
+  txt('katDetayListBaslik', k.ad + ' Giderleri');
+  // Listeyi render et
+  renderKatDetayList();
+  // Sayfaya geç
+  window.navTo('secKatDetay');
+};
+
+/* katDetayGiderEkle — detay sayfasındaki "Gider Ekle" butonu */
+window.katDetayGiderEkle = function() {
+  if (!aktifKat) return;
+  window.openGiderModal(aktifKat.ad, aktifKat.icon);
+};
+
+/* renderKatDetayList — aktif kategorinin giderlerini listele */
+function renderKatDetayList() {
+  const el = G('elKatDetayList');
+  if (!el || !aktifKat) return;
+  const list = (S.giderler || []).filter(function(g) { return g.kat === aktifKat.ad; });
+  const toplam = list.reduce(function(s, g) { return s + (g.tutar || 0); }, 0);
+  txt('katDetayToplam', fmt(toplam));
+  txt('katDetaySayi', list.length + ' kayıt');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty">Bu kategoriye henüz gider eklenmedi</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(g) {
+    return '<div class="li">' +
+      '<div class="li-i">' +
+        '<div class="li-t">' + (g.aciklama || g.kat) + '</div>' +
+        '<div class="li-s">' + dateStr(g.tarih) + ' · ' + (g.hesap === 'nakit' ? '💵 Nakit' : '🏦 Banka') + '</div>' +
+      '</div>' +
+      '<div class="li-r">' +
+        '<span class="amt neg">-' + fmt(g.tutar) + '</span>' +
+        '<div class="la">' +
+          '<button class="btn btn-warn btn-sm btn-ic" onclick="window.giderDuzenle(' + g.id + ')" title="Düzenle">✏️</button>' +
+          '<button class="btn btn-danger btn-sm btn-ic" onclick="window.silGiderKat(' + g.id + ')" title="Sil">🗑️</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* giderDuzenle — detay sayfasından gider düzenleme */
+window.giderDuzenle = function(id) {
+  if (!S.giderler) return;
+  const g = S.giderler.find(function(x) { return x.id === id; });
+  if (!g) return;
+  const modal = G('mGider');
+  if (!modal) return;
+  txt('mgT', 'Gideri Düzenle');
+  txt('mgS', (aktifKat ? aktifKat.icon : '') + '  ' + g.kat);
+  modal.dataset.kat = g.kat;
+  modal.dataset.editId = String(id);
+  const gTarih = G('gTarih'); if (gTarih) gTarih.value = g.tarih;
+  const gTutar = G('gTutar'); if (gTutar) gTutar.value = g.tutar;
+  const gAcik  = G('gAcik');  if (gAcik)  gAcik.value  = g.aciklama || '';
+  const rHesap = document.querySelector('input[name=gHesap][value=' + g.hesap + ']');
+  if (rHesap) rHesap.checked = true;
+  gBakiyeGuncelle();
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+  setTimeout(function(){ const t=G('gTutar'); if(t) t.focus(); }, 100);
+};
+
+/* silGiderKat — detay sayfasından sil, bakiyeye geri ekle, listeyi güncelle */
+window.silGiderKat = function(id) {
+  if (!S.giderler) return;
+  const g = S.giderler.find(function(x){ return x.id === id; });
+  if (!g) return;
+  conf('Gideri Sil', '"' + (g.aciklama || g.kat) + '" — ' + fmt(g.tutar) + ' silinecek.', 'Sil', function() {
+    S.giderler = S.giderler.filter(function(x){ return x.id !== id; });
+    if (g.hesap === 'nakit') { S.kasa.nakit += g.tutar; S.nakit = S.kasa.nakit; }
+    else                     { S.kasa.banka += g.tutar; S.banka = S.kasa.banka; }
+    renderKatDetayList(); // detay listesini güncelle
+    renderGList();        // genel listeyi de güncelle
+    bakiyeyiGuncelle();
+    sched();
+    toast('Gider silindi', 'success');
+  });
 };
 
 /* openGiderModal — modalı aç, kategoriyi doldur */
@@ -1582,58 +1696,62 @@ document.querySelectorAll('input[name=gHesap]').forEach(function(r){
   r.addEventListener('change', gBakiyeGuncelle);
 });
 
-/* kaydetGider — gideri S'e ekle, kasadan düş, kaydet */
+/* kaydetGider — gideri S'e ekle (veya düzenle), kasadan düş, kaydet */
 window.kaydetGider = function() {
   const modal   = G('mGider');
   const katAdi  = modal ? (modal.dataset.kat || 'Gider') : 'Gider';
+  const editId  = modal && modal.dataset.editId ? Number(modal.dataset.editId) : null;
   const tutarEl = G('gTutar');
   const tarihEl = G('gTarih');
   const acikEl  = G('gAcik');
   const hesapEl = document.querySelector('input[name=gHesap]:checked');
 
-  const tutar   = tutarEl  ? parseFloat(tutarEl.value)  : 0;
-  const tarih   = tarihEl  ? tarihEl.value               : today();
-  const aciklama= acikEl   ? acikEl.value.trim()         : '';
-  const hesap   = hesapEl  ? hesapEl.value               : 'nakit';
+  const tutar    = tutarEl  ? parseFloat(tutarEl.value)  : 0;
+  const tarih    = tarihEl  ? tarihEl.value               : today();
+  const aciklama = acikEl   ? acikEl.value.trim()         : '';
+  const hesap    = hesapEl  ? hesapEl.value               : 'nakit';
 
-  if (!tutar || tutar <= 0) {
-    toast('Tutar girmelisiniz', 'error');
-    return;
+  if (!tutar || tutar <= 0) { toast('Tutar girmelisiniz', 'error'); return; }
+  if (!tarih)               { toast('Tarih seçmelisiniz', 'error'); return; }
+
+  if (editId) {
+    // DÜZENLEME MODU
+    const g = (S.giderler || []).find(function(x){ return x.id === editId; });
+    if (!g) return;
+    // Eski tutarı kasaya geri ekle
+    if (g.hesap === 'nakit') { S.kasa.nakit += g.tutar; }
+    else                     { S.kasa.banka += g.tutar; }
+    // Yeni tutarı kontrol et
+    const mevcutBak = hesap === 'nakit' ? S.kasa.nakit : S.kasa.banka;
+    if (mevcutBak < tutar) {
+      // Geri al
+      if (g.hesap === 'nakit') S.kasa.nakit -= g.tutar;
+      else                     S.kasa.banka -= g.tutar;
+      toast('Yetersiz bakiye! Mevcut: ' + fmt(mevcutBak), 'error'); return;
+    }
+    // Güncelle
+    g.tutar = tutar; g.tarih = tarih; g.aciklama = aciklama; g.hesap = hesap;
+    if (hesap === 'nakit') S.kasa.nakit -= tutar;
+    else                   S.kasa.banka -= tutar;
+    S.nakit = S.kasa.nakit; S.banka = S.kasa.banka;
+    toast('Gider güncellendi', 'success');
+    if (modal) delete modal.dataset.editId;
+  } else {
+    // YENİ KAYIT
+    const mevcutBak = hesap === 'nakit' ? S.kasa.nakit : S.kasa.banka;
+    if (mevcutBak < tutar) { toast('Yetersiz bakiye! Mevcut: ' + fmt(mevcutBak), 'error'); return; }
+    const gider = { id: Date.now(), kat: katAdi, tutar: tutar, hesap: hesap, tarih: tarih, aciklama: aciklama };
+    if (!S.giderler) S.giderler = [];
+    S.giderler.unshift(gider);
+    if (hesap === 'nakit') S.kasa.nakit -= tutar;
+    else                   S.kasa.banka -= tutar;
+    S.nakit = S.kasa.nakit; S.banka = S.kasa.banka;
+    toast(katAdi + ' gideri eklendi: ' + fmt(tutar), 'success');
   }
-  if (!tarih) {
-    toast('Tarih seçmelisiniz', 'error');
-    return;
-  }
 
-  // Bakiye kontrolü
-  const mevcutBak = hesap === 'nakit' ? S.kasa.nakit : S.kasa.banka;
-  if (mevcutBak < tutar) {
-    toast('Yetersiz bakiye! Mevcut: ' + fmt(mevcutBak), 'error');
-    return;
-  }
-
-  // Gideri S'e ekle
-  const gider = {
-    id:        Date.now(),
-    kat:       katAdi,
-    tutar:     tutar,
-    hesap:     hesap,
-    tarih:     tarih,
-    aciklama:  aciklama
-  };
-  if (!S.giderler) S.giderler = [];
-  S.giderler.unshift(gider);
-
-  // Kasadan düş
-  if (hesap === 'nakit') S.kasa.nakit -= tutar;
-  else                   S.kasa.banka -= tutar;
-  // Ana bakiye de güncelle
-  S.nakit = S.kasa.nakit;
-  S.banka = S.kasa.banka;
-
-  toast(katAdi + ' gideri eklendi: ' + fmt(tutar), 'success');
   window.closeModal('mGider');
   renderGList();
+  renderKatDetayList(); // detay sayfasını da güncelle
   bakiyeyiGuncelle();
   sched();
 };
