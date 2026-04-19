@@ -468,8 +468,8 @@ body{font-family:'Inter',sans-serif;background:var(--d1);color:var(--t1);min-hei
     </div>
     <div class="ff" style="margin-top:12px"><label>Açıklama</label><input type="text" id="bAcik" placeholder="İşlem açıklaması..."></div>
     <div class="mf">
-      <button class="btn btn-ghost" onclick="closeModal('mBakiye')">İptal</button>
-      <button class="btn btn-primary" onclick="kaydetBakiye()">Kaydet</button>
+      <button class="btn btn-ghost" onclick="window.closeModal('mBakiye')">İptal</button>
+      <button class="btn btn-primary" onclick="window.kaydetBakiye()">Kaydet</button>
     </div>
   </div>
 </div>
@@ -494,8 +494,8 @@ body{font-family:'Inter',sans-serif;background:var(--d1);color:var(--t1);min-hei
     <!-- Mevcut bakiye göstergesi -->
     <div id="giderBakiyeInfo" style="font-size:12px;color:var(--t3);padding:8px 12px;background:rgba(255,255,255,.03);border-radius:var(--r);margin-bottom:4px"></div>
     <div class="mf">
-      <button class="btn btn-ghost" onclick="closeModal('mGider')">İptal</button>
-      <button class="btn btn-primary" onclick="kaydetGider()">Gideri Kaydet</button>
+      <button class="btn btn-ghost" onclick="window.closeModal('mGider')">İptal</button>
+      <button class="btn btn-primary" onclick="window.kaydetGider()">💾 Gideri Kaydet</button>
     </div>
   </div>
 </div>
@@ -507,8 +507,8 @@ body{font-family:'Inter',sans-serif;background:var(--d1);color:var(--t1);min-hei
     <div class="ff"><label>Kategori Adı</label><input type="text" id="katAd" placeholder="Kira, Bakım..."></div>
     <div class="ff"><label>Emoji / İkon</label><input type="text" id="katIkon" placeholder="📌" maxlength="4"></div>
     <div class="mf">
-      <button class="btn btn-ghost" onclick="closeModal('mKat')">İptal</button>
-      <button class="btn btn-primary" onclick="kaydetKat()">Kaydet</button>
+      <button class="btn btn-ghost" onclick="window.closeModal('mKat')">İptal</button>
+      <button class="btn btn-primary" onclick="window.kaydetKat()">Kaydet</button>
     </div>
   </div>
 </div>
@@ -542,8 +542,8 @@ body{font-family:'Inter',sans-serif;background:var(--d1);color:var(--t1);min-hei
       <label class="rl"><input type="radio" name="kHesap" value="banka">🏦 Banka</label>
     </div></div>
     <div class="mf">
-      <button class="btn btn-ghost" onclick="closeModal('mOrg')">İptal</button>
-      <button class="btn btn-primary" onclick="kaydetOrg()">Kaydet</button>
+      <button class="btn btn-ghost" onclick="window.closeModal('mOrg')">İptal</button>
+      <button class="btn btn-primary" onclick="window.kaydetOrg()">Kaydet</button>
     </div>
   </div>
 </div>
@@ -557,8 +557,8 @@ body{font-family:'Inter',sans-serif;background:var(--d1);color:var(--t1);min-hei
       <label class="rl"><input type="radio" name="tHesap" value="banka">🏦 Banka</label>
     </div></div>
     <div class="mf">
-      <button class="btn btn-ghost" onclick="closeModal('mTahsilat')">İptal</button>
-      <button class="btn btn-success" onclick="tahsilatAl()">✓ Ödeme Alındı</button>
+      <button class="btn btn-ghost" onclick="window.closeModal('mTahsilat')">İptal</button>
+      <button class="btn btn-success" onclick="window.tahsilatAl()">✓ Ödeme Alındı</button>
     </div>
   </div>
 </div>
@@ -1459,27 +1459,46 @@ function renderBList() {
    KATEGORİ CRUD + RENDER
    Sorun 1 düzeltmesi: onclick event doğrudan HTML'de + hover ile .kat-acts göster
 ══════════════════════════════════════ */
-/* ── Seçili kategori state (openGiderModal için) ── */
+/* ── Seçili kategori state ── */
 let seciliKategori = null;
+
+/* giderModalAc — onclick içinde index ile çağrılır.
+   HTML attribute içine obje literal yazmak bazı tarayıcılarda parse hatası verir.
+   Bu yüzden sadece sayı (index) geçilir, kategori S'den okunur. */
+window.giderModalAc = function(i) {
+  const k = S.kategoriler[i];
+  if (!k) return;
+  seciliKategori = k;
+  editGId        = null;
+  editGKat       = k.ad;
+  txt('mgT', 'Gider Ekle');
+  txt('mgS', k.icon + ' ' + k.ad);
+  G('gTarih').value = today();
+  G('gTutar').value = '';
+  G('gAcik').value  = '';
+  const r = document.querySelector('input[name=gHesap][value=nakit]');
+  if (r) r.checked = true;
+  const modal = G('mGider');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+  try { updateGiderBakiyeInfo(); } catch(_) {}
+  setTimeout(function(){ var t=G('gTutar'); if(t) t.focus(); }, 100);
+};
 
 function renderKatGrid() {
   const grid = G('katGrid');
   if (!grid) return;
 
-  /* Sadece tıklanabilir kart — düzenle/sil butonu YOK.
-     Kategori yönetimi ayrı panelde (renderKatYonetim). */
-  const h = (S.kategoriler || []).map((k, i) => {
-    const safeAd   = k.ad.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    const safeIcon = (k.icon || '').replace(/'/g, "\\'");
-    return `<div class="kat-item" onclick="openGiderModal({ad:'${safeAd}',icon:'${safeIcon}'})">
-      <span class="kat-icon">${k.icon}</span>
-      <span class="kat-ad">${k.ad}</span>
-    </div>`;
+  /* onclick içine sadece index geçiliyor — güvenli ve her tarayıcıda çalışır */
+  const h = (S.kategoriler || []).map(function(k, i) {
+    return '<div class="kat-item" onclick="giderModalAc(' + i + ')">' +
+      '<span class="kat-icon">' + k.icon + '</span>' +
+      '<span class="kat-ad">' + k.ad + '</span>' +
+      '</div>';
   }).join('');
 
   grid.innerHTML = h || '<div class="empty">Kategori yok — aşağıdan ekleyin</div>';
-
-  /* Kategori yönetim listesini de güncelle */
   renderKatYonetim();
 }
 
@@ -1553,56 +1572,35 @@ window.silKat = function (idx) {
    GİDER CRUD
 ══════════════════════════════════════ */
 
-/* openGiderModal — kategori objesi veya (id) ile çağrılır
-   Yeni gider: openGiderModal({ad:'Personel', icon:'👤'})
-   Düzenleme:  openGiderModal({id: 123456})
-*/
-window.openGiderModal = function (katOrId) {
+/* openGiderModal — sadece mevcut gideri DÜZENLEMEK için
+   Yeni gider eklemek için: giderModalAc(i) kullanılır */
+window.openGiderModal = function (gId) {
   const modal = G('mGider');
-  if (!modal) { console.error('mGider bulunamadı!'); return; }
+  if (!modal) return;
 
-  /* Düzenleme modu: sayısal/string id geçildiyse */
-  const isEdit = (katOrId !== null && katOrId !== undefined &&
-                  (typeof katOrId === 'number' ||
-                   (typeof katOrId === 'string' && katOrId !== 'null') ||
-                   (typeof katOrId === 'object' && katOrId !== null && katOrId.id !== undefined)));
-
-  if (isEdit && (typeof katOrId !== 'object' || katOrId.id !== undefined)) {
-    const gId = typeof katOrId === 'object' ? katOrId.id : katOrId;
-    const g   = S.giderler.find(x => String(x.id) === String(gId));
-    if (!g) return;
-    editGId  = gId;
-    editGKat = g.kat;
-    txt('mgT', 'Gideri Düzenle');
-    txt('mgS', g.kat);
-    G('gTarih').value = g.tarih;
-    G('gTutar').value = g.tutar;
-    G('gAcik').value  = g.aciklama || '';
-    const r = document.querySelector('input[name=gHesap][value=' + g.hesap + ']');
-    if (r) r.checked = true;
-  } else {
-    /* Yeni gider modu: obje {ad, icon} geçildi */
-    const kat = (typeof katOrId === 'object' && katOrId !== null) ? katOrId : { ad: 'Gider', icon: '' };
-    editGId       = null;
-    editGKat      = kat.ad;
-    seciliKategori = kat;
-    txt('mgT', 'Gider Ekle');
-    txt('mgS', (kat.icon || '') + ' ' + kat.ad);
-    G('gTarih').value = today();
-    G('gTutar').value = '';
-    G('gAcik').value  = '';
-    const r = document.querySelector('input[name=gHesap][value=nakit]');
-    if (r) r.checked = true;
+  /* Eğer obje geçildiyse (eski çağrılardan kalan) id'yi çıkar */
+  if (typeof gId === 'object' && gId !== null) {
+    gId = gId.id !== undefined ? gId.id : null;
   }
+  if (!gId && gId !== 0) return;
 
-  console.log('Gider modal açılıyor:', editGKat);
+  const g = S.giderler.find(function(x){ return String(x.id) === String(gId); });
+  if (!g) return;
 
-  /* Modal aç — ikili garanti */
+  editGId  = gId;
+  editGKat = g.kat;
+  txt('mgT', 'Gideri Düzenle');
+  txt('mgS', g.kat);
+  G('gTarih').value = g.tarih;
+  G('gTutar').value = g.tutar;
+  G('gAcik').value  = g.aciklama || '';
+  var r = document.querySelector('input[name=gHesap][value=' + g.hesap + ']');
+  if (r) r.checked = true;
+
   modal.style.display = 'flex';
   modal.classList.add('open');
-
-  try { updateGiderBakiyeInfo(); } catch (_) {}
-  setTimeout(() => { const t = G('gTutar'); if (t) t.focus(); }, 150);
+  try { updateGiderBakiyeInfo(); } catch(_) {}
+  setTimeout(function(){ var t=G('gTutar'); if(t) t.focus(); }, 100);
 };
 
 // Gider modalındaki bakiye bilgisini güncelle
@@ -1700,7 +1698,7 @@ function renderGList() {
     <div class="li-r">
       <span class="amt neg">-${fmt(g.tutar)}</span>
       <div class="la">
-        <button class="btn btn-warn btn-sm btn-ic" onclick="openGiderModal({id:${g.id}})" title="Düzenle">✏️</button>
+        <button class="btn btn-warn btn-sm btn-ic" onclick="openGiderModal(${g.id})" title="Düzenle">✏️</button>
         <button class="btn btn-danger btn-sm btn-ic" onclick="silGider(${g.id})" title="Sil">🗑️</button>
       </div>
     </div>
