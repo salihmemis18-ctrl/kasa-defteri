@@ -1381,7 +1381,7 @@ window.openBakModal = function (hesap, id) {
     G('bTarih').value = today(); G('bTutar').value = ''; G('bAcik').value = '';
     document.querySelector('input[name=bTip][value=ekle]').checked = true;
   }
-  openModal('mBakiye');
+  window.openModal('mBakiye');
   setTimeout(() => G('bTutar').focus(), 130);
 };
 
@@ -1399,7 +1399,7 @@ window.kaydetBakiye = function () {
     S.bakiyeIslemleri.unshift({ id: uid(), hesap: editBH, tip, tutar, tarih, aciklama });
     toast('Bakiye işlemi eklendi', 'success');
   }
-  recalc(); closeModal('mBakiye'); updateAll(); sched();
+  recalc(); window.closeModal('mBakiye'); updateAll(); sched();
 };
 
 window.silBakiye = function (id) {
@@ -1464,15 +1464,19 @@ function renderKatGrid() {
   </div>`;
   el.innerHTML = html;
 
-  // Event listener ile bağla — onclick string ile çalışmayan sorun çözüldü
+  // Her kategori kartına event bağla
+  // window.openGiderModal kullanılıyor — module scope sorunu önlenir
   el.querySelectorAll('.kat-item:not(.kat-add)').forEach(item => {
     const idx = parseInt(item.getAttribute('data-kat-idx'));
     const k   = S.kategoriler[idx];
     if (!k) return;
 
     // Kategoriye tıkla → gider modalı aç
-    item.addEventListener('click', () => {
-      openGiderModal(null, k.ad, k.icon);
+    item.addEventListener('click', (e) => {
+      // Düzenle/Sil butonlarına tıklandıysa gider modalını açma
+      if (e.target.closest('.kat-acts')) return;
+      console.log('Gider modal açılıyor:', k.ad, k.icon);
+      window.openGiderModal(null, k.ad, k.icon);
     });
 
     // Düzenle butonu
@@ -1480,7 +1484,7 @@ function renderKatGrid() {
     if (editBtn) {
       editBtn.addEventListener('click', e => {
         e.stopPropagation();
-        openKatModal(idx);
+        window.openKatModal(idx);
       });
     }
 
@@ -1489,14 +1493,14 @@ function renderKatGrid() {
     if (delBtn) {
       delBtn.addEventListener('click', e => {
         e.stopPropagation();
-        silKat(idx);
+        window.silKat(idx);
       });
     }
   });
 
   // Yeni kategori butonu
   const addBtn = el.querySelector('#katAddBtn');
-  if (addBtn) addBtn.addEventListener('click', () => openKatModal(null));
+  if (addBtn) addBtn.addEventListener('click', () => window.openKatModal(null));
 }
 
 window.openKatModal = function (idx) {
@@ -1507,7 +1511,7 @@ window.openKatModal = function (idx) {
   } else {
     txt('mkT', 'Yeni Kategori'); G('katAd').value = ''; G('katIkon').value = '📌';
   }
-  openModal('mKat');
+  window.openModal('mKat');
 };
 
 window.kaydetKat = function () {
@@ -1523,7 +1527,7 @@ window.kaydetKat = function () {
     S.kategoriler.push({ ad, icon });
     toast('Kategori eklendi', 'success');
   }
-  closeModal('mKat'); renderKatGrid(); renderGList(); sched();
+  window.closeModal('mKat'); renderKatGrid(); renderGList(); sched();
 };
 
 window.silKat = function (idx) {
@@ -1541,6 +1545,7 @@ window.silKat = function (idx) {
    Sorun 2 düzeltmesi: bakiye düşme + S.kasa güncellemesi
 ══════════════════════════════════════ */
 window.openGiderModal = function (id, kat, icon) {
+  console.log('Gider modal açılıyor:', id, kat, icon); // debug
   editGId = (id !== null && id !== undefined && String(id) !== 'null') ? id : null;
 
   if (editGId) {
@@ -1555,13 +1560,19 @@ window.openGiderModal = function (id, kat, icon) {
     txt('mgT', 'Gider Ekle');
     txt('mgS', (icon || '') + ' ' + (kat || ''));
     G('gTarih').value = today(); G('gTutar').value = ''; G('gAcik').value = '';
-    document.querySelector('input[name=gHesap][value=nakit]').checked = true;
+    const r = document.querySelector('input[name=gHesap][value=nakit]');
+    if (r) r.checked = true;
   }
 
   // Mevcut bakiye bilgisini göster
   updateGiderBakiyeInfo();
-  openModal('mGider');
-  setTimeout(() => G('gTutar').focus(), 130);
+
+  // Modal aç — hem classList hem style ile garanti et
+  const modal = G('mGider');
+  if (!modal) { console.error('mGider modalı bulunamadı!'); return; }
+  modal.classList.add('open');
+
+  setTimeout(() => { const t = G('gTutar'); if (t) t.focus(); }, 130);
 };
 
 // Gider modalındaki bakiye bilgisini güncelle (hesap seçimine göre)
@@ -1634,7 +1645,7 @@ window.kaydetGider = function () {
 
   // recalc — bakiyeyi yeniden hesapla (giderler otomatik düşer)
   recalc();
-  closeModal('mGider');
+  window.closeModal('mGider');
   updateAll();
   sched();
 };
@@ -1702,7 +1713,7 @@ window.openOrgModal = function (id) {
     document.querySelector('input[name=oHesap][value=nakit]').checked = true;
     document.querySelector('input[name=kHesap][value=nakit]').checked = true;
   }
-  openModal('mOrg');
+  window.openModal('mOrg');
 };
 
 window.cakismaNo  = function () { G('cCakisma').classList.remove('open'); pendOrg = null; };
@@ -1765,7 +1776,7 @@ function saveOrg(data) {
       durum: odeme === 'pesin' ? 'tahsil' : 'vadeli', hesap });
     toast(odeme === 'pesin' ? 'Organizasyon eklendi' : kapora > 0 ? 'Vadeli, kapora eklendi' : 'Vadeli kaydedildi', 'success');
   }
-  recalc(); closeModal('mOrg'); updateAll(); sched();
+  recalc(); window.closeModal('mOrg'); updateAll(); sched();
 }
 
 window.silOrg = function (id) {
@@ -1784,7 +1795,7 @@ window.openTahsilat = function (id) {
   txt('tahInfo', o.aciklama + ' · Toplam: ' + fmt(o.ucret) +
     ((o.kapora || 0) > 0 ? ' · Kapora: ' + fmt(o.kapora) + ' · Kalan: ' + fmt(kalan) : ''));
   document.querySelector('input[name=tHesap][value=nakit]').checked = true;
-  openModal('mTahsilat');
+  window.openModal('mTahsilat');
 };
 
 window.tahsilatAl = function () {
@@ -1798,7 +1809,7 @@ window.tahsilatAl = function () {
     aciklama: o.aciklama + ((o.kapora || 0) > 0 ? ' (Kalan Tahsilat)' : ' (Tahsilat)'),
     tutar: miktar, hesap, tarih: today(), refId: o.id
   });
-  recalc(); closeModal('mTahsilat'); updateAll(); sched(); toast('Tahsilat tamamlandı', 'success');
+  recalc(); window.closeModal('mTahsilat'); updateAll(); sched(); toast('Tahsilat tamamlandı', 'success');
 };
 
 /* ── Panel Renders ── */
