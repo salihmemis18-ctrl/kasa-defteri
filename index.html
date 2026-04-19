@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<! html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
@@ -1448,79 +1448,59 @@ function renderBList() {
    Sorun 1 düzeltmesi: onclick event doğrudan HTML'de + hover ile .kat-acts göster
 ══════════════════════════════════════ */
 function renderKatGrid() {
-  const el = G('katGrid'); if (!el) return;
+  const el = G('katGrid'); 
+  if (!el) return;
 
-  // onclick string olarak HTML'e yazılıyor.
-  // Bu yöntem type="module" scope sorununu tamamen bypass eder:
-  // tarayıcı onclick string'i global (window) scope'unda çalıştırır,
-  // dolayısıyla window.katTikla, window.katDuzenle, window.katSil
-  // garantili bulunur.
   let html = S.kategoriler.map((k, i) => `
-    <div class="kat-item" onclick="katTikla(${i})">
+    <div class="kat-item" data-idx="${i}">
+      
       <div class="kat-acts">
-        <span class="kat-act" onclick="event.stopPropagation();katDuzenle(${i})" title="Düzenle">✏️</span>
-        <span class="kat-act" onclick="event.stopPropagation();katSil(${i})" title="Sil">🗑️</span>
+        <div class="kat-act" data-edit="${i}">✏️</div>
+        <div class="kat-act" data-del="${i}">🗑️</div>
       </div>
+
       <span class="kat-icon">${k.icon}</span>
       <span class="kat-ad">${k.ad}</span>
-    </div>`).join('');
 
-  html += `<div class="kat-item kat-add" onclick="katYeniEkle()">
-    <span class="kat-icon">➕</span>
-    <span class="kat-ad">Yeni Kategori</span>
-  </div>`;
+    </div>
+  `).join('');
+
+  html += `
+    <div class="kat-item kat-add" id="katAddBtn">
+      <span class="kat-icon">➕</span>
+      <span class="kat-ad">Yeni Kategori</span>
+    </div>
+  `;
 
   el.innerHTML = html;
+
+  el.onclick = (e) => {
+
+    const katItem = e.target.closest('.kat-item');
+    if (!katItem) return;
+
+    if (katItem.id === 'katAddBtn') {
+      openKatModal();
+      return;
+    }
+
+    const idx = katItem.dataset.idx;
+
+    if (e.target.closest('[data-edit]')) {
+      editKategori(idx);
+      return;
+    }
+
+    if (e.target.closest('[data-del]')) {
+      deleteKategori(idx);
+      return;
+    }
+
+    console.log("TIKLANDI:", S.kategoriler[idx]);
+
+    openGiderModal(S.kategoriler[idx]);
+  };
 }
-
-/* Kategori tıklama dispatcher'ları — window scope'unda tanımlı,
-   onclick string'lerden güvenle çağrılır */
-window.katTikla = function(i) {
-  const k = S.kategoriler[i];
-  if (!k) return;
-  console.log('Kategori tıklandı:', k.ad, k.icon);
-  window.openGiderModal(null, k.ad, k.icon);
-};
-window.katDuzenle = function(i) { window.openKatModal(i); };
-window.katSil     = function(i) { window.silKat(i); };
-window.katYeniEkle = function()  { window.openKatModal(null); };
-
-window.openKatModal = function (idx) {
-  editKatI = (idx !== undefined && idx !== null) ? Number(idx) : null;
-  if (editKatI !== null) {
-    const k = S.kategoriler[editKatI]; if (!k) return;
-    txt('mkT', 'Kategori Düzenle'); G('katAd').value = k.ad; G('katIkon').value = k.icon;
-  } else {
-    txt('mkT', 'Yeni Kategori'); G('katAd').value = ''; G('katIkon').value = '📌';
-  }
-  window.openModal('mKat');
-};
-
-window.kaydetKat = function () {
-  const ad   = G('katAd').value.trim();
-  const icon = G('katIkon').value.trim() || '📌';
-  if (!ad) { toast('Kategori adı girin', 'error'); return; }
-  if (editKatI !== null) {
-    const eski = S.kategoriler[editKatI].ad;
-    S.kategoriler[editKatI] = { ad, icon };
-    S.giderler.forEach(g => { if (g.kat === eski) g.kat = ad; });
-    toast('Kategori güncellendi', 'success');
-  } else {
-    S.kategoriler.push({ ad, icon });
-    toast('Kategori eklendi', 'success');
-  }
-  window.closeModal('mKat'); renderKatGrid(); renderGList(); sched();
-};
-
-window.silKat = function (idx) {
-  const k = S.kategoriler[idx]; if (!k) return;
-  const n = S.giderler.filter(g => g.kat === k.ad).length;
-  conf('Kategoriyi Sil',
-    n > 0 ? `"${k.ad}" ${n} gider kaydında kullanılıyor. Yine de silinsin mi?` : `"${k.ad}" silinecek.`,
-    'Sil',
-    () => { S.kategoriler.splice(idx, 1); renderKatGrid(); sched(); toast('Kategori silindi', 'success'); }
-  );
-};
 
 /* ══════════════════════════════════════
    GİDER CRUD
