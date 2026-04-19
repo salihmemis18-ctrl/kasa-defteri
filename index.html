@@ -338,15 +338,27 @@ body{font-family:'Inter',sans-serif;background:var(--d1);color:var(--t1);min-hei
       <!-- GİDERLER -->
       <section id="secGider" class="sec">
         <div class="stitle">Gider Girişi</div>
-        <div class="ssub">Kategoriye tıklayın — gider ekleyin</div>
+        <div class="ssub">Kategoriye tıklayın → gider ekleyin</div>
+
+        <!-- KATEGORİ SEÇİM KARTLARI — tıkla → gider modal açılır -->
         <div class="panel">
-          <div class="ph"><div class="pt">Kategoriler</div></div>
-          <!-- KATEGORİ GRİD — JS ile doldurulacak -->
+          <div class="ph"><div class="pt">📂 Kategori Seç</div></div>
           <div class="kat-grid" id="katGrid"></div>
         </div>
+
+        <!-- GİDER GEÇMİŞİ -->
         <div class="panel">
           <div class="ph"><div class="pt">Gider Geçmişi</div></div>
           <div id="elGider"><div class="empty">Henüz gider yok</div></div>
+        </div>
+
+        <!-- KATEGORİ YÖNETİM ALANI — ana kartlardan ayrı, küçük liste -->
+        <div class="panel" style="border-color:rgba(255,255,255,.05)">
+          <div class="ph">
+            <div class="pt" style="color:var(--t3)">⚙️ Kategori Yönet</div>
+            <button class="btn btn-ghost btn-sm" onclick="katYeniEkle()" style="font-size:11px">+ Yeni Kategori</button>
+          </div>
+          <div id="katYonetimList"></div>
         </div>
       </section>
 
@@ -1447,34 +1459,55 @@ function renderBList() {
    KATEGORİ CRUD + RENDER
    Sorun 1 düzeltmesi: onclick event doğrudan HTML'de + hover ile .kat-acts göster
 ══════════════════════════════════════ */
+/* ── Seçili kategori state (openGiderModal için) ── */
+let seciliKategori = null;
+
 function renderKatGrid() {
   const grid = G('katGrid');
   if (!grid) return;
 
-  let h = (S.kategoriler || []).map((k, i) => {
-    // Kategori adındaki tek tırnak karakterlerini kaç — onclick string bozulmasın
+  /* Sadece tıklanabilir kart — düzenle/sil butonu YOK.
+     Kategori yönetimi ayrı panelde (renderKatYonetim). */
+  const h = (S.kategoriler || []).map((k, i) => {
     const safeAd   = k.ad.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const safeIcon = (k.icon || '').replace(/'/g, "\\'");
-    return `
-      <div class="kat-item" onclick="openGiderModal(null,'${safeAd}','${safeIcon}')">
-        <div class="kat-acts">
-          <span class="kat-act" onclick="event.stopPropagation();katDuzenle(${i})" title="Düzenle">✏️</span>
-          <span class="kat-act" onclick="event.stopPropagation();katSil(${i})"     title="Sil">🗑️</span>
-        </div>
-        <span class="kat-icon">${k.icon}</span>
-        <span class="kat-ad">${k.ad}</span>
-      </div>`;
+    return `<div class="kat-item" onclick="openGiderModal({ad:'${safeAd}',icon:'${safeIcon}'})">
+      <span class="kat-icon">${k.icon}</span>
+      <span class="kat-ad">${k.ad}</span>
+    </div>`;
   }).join('');
 
-  h += `<div class="kat-item kat-add" onclick="katYeniEkle()">
-    <span class="kat-icon">➕</span>
-    <span class="kat-ad">Yeni Kategori</span>
-  </div>`;
+  grid.innerHTML = h || '<div class="empty">Kategori yok — aşağıdan ekleyin</div>';
 
-  grid.innerHTML = h;
+  /* Kategori yönetim listesini de güncelle */
+  renderKatYonetim();
 }
 
-/* Dispatcher'lar — window scope'unda, onclick string'lerden güvenle çağrılır */
+/* Kategori yönetim listesi — her satırda ✏️ 🗑️ */
+function renderKatYonetim() {
+  const el = G('katYonetimList');
+  if (!el) return;
+  if (!S.kategoriler.length) {
+    el.innerHTML = '<div class="empty" style="padding:12px 0;font-size:12px">Henüz kategori yok</div>';
+    return;
+  }
+  el.innerHTML = S.kategoriler.map((k, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:7px 0;border-bottom:1px solid var(--d4);gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px">
+        <span>${k.icon}</span>
+        <span style="color:var(--t2)">${k.ad}</span>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-ghost btn-sm btn-ic"
+                onclick="katDuzenle(${i})" title="Düzenle">✏️</button>
+        <button class="btn btn-danger btn-sm btn-ic"
+                onclick="katSil(${i})"    title="Sil">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+/* Dispatcher'lar */
 window.katDuzenle  = function(i) { window.openKatModal(i); };
 window.katSil      = function(i) { window.silKat(i); };
 window.katYeniEkle = function()  { window.openKatModal(null); };
@@ -1518,19 +1551,28 @@ window.silKat = function (idx) {
 
 /* ══════════════════════════════════════
    GİDER CRUD
-   Sorun 2 düzeltmesi: bakiye düşme + S.kasa güncellemesi
 ══════════════════════════════════════ */
-window.openGiderModal = function (id, kat, icon) {
-  console.log('Gider modal açılıyor:', id, kat, icon);
 
-  editGId = (id !== null && id !== undefined && String(id) !== 'null') ? id : null;
-
+/* openGiderModal — kategori objesi veya (id) ile çağrılır
+   Yeni gider: openGiderModal({ad:'Personel', icon:'👤'})
+   Düzenleme:  openGiderModal({id: 123456})
+*/
+window.openGiderModal = function (katOrId) {
   const modal = G('mGider');
   if (!modal) { console.error('mGider bulunamadı!'); return; }
 
-  if (editGId) {
-    const g = S.giderler.find(x => String(x.id) === String(editGId));
+  /* Düzenleme modu: sayısal/string id geçildiyse */
+  const isEdit = (katOrId !== null && katOrId !== undefined &&
+                  (typeof katOrId === 'number' ||
+                   (typeof katOrId === 'string' && katOrId !== 'null') ||
+                   (typeof katOrId === 'object' && katOrId !== null && katOrId.id !== undefined)));
+
+  if (isEdit && (typeof katOrId !== 'object' || katOrId.id !== undefined)) {
+    const gId = typeof katOrId === 'object' ? katOrId.id : katOrId;
+    const g   = S.giderler.find(x => String(x.id) === String(gId));
     if (!g) return;
+    editGId  = gId;
+    editGKat = g.kat;
     txt('mgT', 'Gideri Düzenle');
     txt('mgS', g.kat);
     G('gTarih').value = g.tarih;
@@ -1539,9 +1581,13 @@ window.openGiderModal = function (id, kat, icon) {
     const r = document.querySelector('input[name=gHesap][value=' + g.hesap + ']');
     if (r) r.checked = true;
   } else {
-    editGKat = kat || 'Gider';
+    /* Yeni gider modu: obje {ad, icon} geçildi */
+    const kat = (typeof katOrId === 'object' && katOrId !== null) ? katOrId : { ad: 'Gider', icon: '' };
+    editGId       = null;
+    editGKat      = kat.ad;
+    seciliKategori = kat;
     txt('mgT', 'Gider Ekle');
-    txt('mgS', (icon || '') + ' ' + (kat || ''));
+    txt('mgS', (kat.icon || '') + ' ' + kat.ad);
     G('gTarih').value = today();
     G('gTutar').value = '';
     G('gAcik').value  = '';
@@ -1549,13 +1595,13 @@ window.openGiderModal = function (id, kat, icon) {
     if (r) r.checked = true;
   }
 
-  // İkili garanti: hem style hem classList — her tarayıcıda açılır
+  console.log('Gider modal açılıyor:', editGKat);
+
+  /* Modal aç — ikili garanti */
   modal.style.display = 'flex';
   modal.classList.add('open');
 
-  // Bakiye bilgisini modal açıldıktan sonra güncelle
   try { updateGiderBakiyeInfo(); } catch (_) {}
-
   setTimeout(() => { const t = G('gTutar'); if (t) t.focus(); }, 150);
 };
 
@@ -1654,7 +1700,7 @@ function renderGList() {
     <div class="li-r">
       <span class="amt neg">-${fmt(g.tutar)}</span>
       <div class="la">
-        <button class="btn btn-warn btn-sm btn-ic" onclick="openGiderModal(${g.id})" title="Düzenle">✏️</button>
+        <button class="btn btn-warn btn-sm btn-ic" onclick="openGiderModal({id:${g.id}})" title="Düzenle">✏️</button>
         <button class="btn btn-danger btn-sm btn-ic" onclick="silGider(${g.id})" title="Sil">🗑️</button>
       </div>
     </div>
