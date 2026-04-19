@@ -1259,8 +1259,8 @@ function conf(title, msg, okLabel, cb) {
 window.confYesF = function () { G('cConfirm').classList.remove('open'); if (confCb) confCb(); confCb = null; };
 window.confNo   = function () { G('cConfirm').classList.remove('open'); confCb = null; };
 
-window.openModal  = function (id) { G(id).classList.add('open'); };
-window.closeModal = function (id) { G(id).classList.remove('open'); };
+window.openModal  = function (id) { var el=G(id); if(el){ el.classList.add('open'); el.style.display='flex'; } };
+window.closeModal = function (id) { var el=G(id); if(el){ el.classList.remove('open'); el.style.display=''; } };
 
 document.querySelectorAll('.mbg').forEach(m =>
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); })
