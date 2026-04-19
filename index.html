@@ -1448,41 +1448,35 @@ function renderBList() {
    Sorun 1 düzeltmesi: onclick event doğrudan HTML'de + hover ile .kat-acts göster
 ══════════════════════════════════════ */
 function renderKatGrid() {
-  const el = G('katGrid'); if (!el) return;
+  const grid = G('katGrid');
+  if (!grid) return;
 
-  // onclick string olarak HTML'e yazılıyor.
-  // Bu yöntem type="module" scope sorununu tamamen bypass eder:
-  // tarayıcı onclick string'i global (window) scope'unda çalıştırır,
-  // dolayısıyla window.katTikla, window.katDuzenle, window.katSil
-  // garantili bulunur.
-  let html = S.kategoriler.map((k, i) => `
-    <div class="kat-item" onclick="katTikla(${i})">
-      <div class="kat-acts">
-        <span class="kat-act" onclick="event.stopPropagation();katDuzenle(${i})" title="Düzenle">✏️</span>
-        <span class="kat-act" onclick="event.stopPropagation();katSil(${i})" title="Sil">🗑️</span>
-      </div>
-      <span class="kat-icon">${k.icon}</span>
-      <span class="kat-ad">${k.ad}</span>
-    </div>`).join('');
+  let h = (S.kategoriler || []).map((k, i) => {
+    // Kategori adındaki tek tırnak karakterlerini kaç — onclick string bozulmasın
+    const safeAd   = k.ad.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeIcon = (k.icon || '').replace(/'/g, "\\'");
+    return `
+      <div class="kat-item" onclick="openGiderModal(null,'${safeAd}','${safeIcon}')">
+        <div class="kat-acts">
+          <span class="kat-act" onclick="event.stopPropagation();katDuzenle(${i})" title="Düzenle">✏️</span>
+          <span class="kat-act" onclick="event.stopPropagation();katSil(${i})"     title="Sil">🗑️</span>
+        </div>
+        <span class="kat-icon">${k.icon}</span>
+        <span class="kat-ad">${k.ad}</span>
+      </div>`;
+  }).join('');
 
-  html += `<div class="kat-item kat-add" onclick="katYeniEkle()">
+  h += `<div class="kat-item kat-add" onclick="katYeniEkle()">
     <span class="kat-icon">➕</span>
     <span class="kat-ad">Yeni Kategori</span>
   </div>`;
 
-  el.innerHTML = html;
+  grid.innerHTML = h;
 }
 
-/* Kategori tıklama dispatcher'ları — window scope'unda tanımlı,
-   onclick string'lerden güvenle çağrılır */
-window.katTikla = function(i) {
-  const k = S.kategoriler[i];
-  if (!k) return;
-  console.log('Kategori tıklandı:', k.ad, k.icon);
-  window.openGiderModal(null, k.ad, k.icon);
-};
-window.katDuzenle = function(i) { window.openKatModal(i); };
-window.katSil     = function(i) { window.silKat(i); };
+/* Dispatcher'lar — window scope'unda, onclick string'lerden güvenle çağrılır */
+window.katDuzenle  = function(i) { window.openKatModal(i); };
+window.katSil      = function(i) { window.silKat(i); };
 window.katYeniEkle = function()  { window.openKatModal(null); };
 
 window.openKatModal = function (idx) {
@@ -1529,34 +1523,38 @@ window.silKat = function (idx) {
 window.openGiderModal = function (id, kat, icon) {
   console.log('Gider modal açılıyor:', id, kat, icon);
 
-  // Modal elementi — önce bul, yoksa dur
+  editGId = (id !== null && id !== undefined && String(id) !== 'null') ? id : null;
+
   const modal = G('mGider');
   if (!modal) { console.error('mGider bulunamadı!'); return; }
-
-  editGId = (id !== null && id !== undefined && String(id) !== 'null') ? id : null;
 
   if (editGId) {
     const g = S.giderler.find(x => String(x.id) === String(editGId));
     if (!g) return;
-    txt('mgT', 'Gideri Düzenle'); txt('mgS', g.kat);
-    G('gTarih').value = g.tarih; G('gTutar').value = g.tutar; G('gAcik').value = g.aciklama || '';
+    txt('mgT', 'Gideri Düzenle');
+    txt('mgS', g.kat);
+    G('gTarih').value = g.tarih;
+    G('gTutar').value = g.tutar;
+    G('gAcik').value  = g.aciklama || '';
     const r = document.querySelector('input[name=gHesap][value=' + g.hesap + ']');
     if (r) r.checked = true;
   } else {
     editGKat = kat || 'Gider';
     txt('mgT', 'Gider Ekle');
     txt('mgS', (icon || '') + ' ' + (kat || ''));
-    G('gTarih').value = today(); G('gTutar').value = ''; G('gAcik').value = '';
-    // nakit radio'yu seç
-    const rNakit = document.querySelector('input[name=gHesap][value=nakit]');
-    if (rNakit) rNakit.checked = true;
+    G('gTarih').value = today();
+    G('gTutar').value = '';
+    G('gAcik').value  = '';
+    const r = document.querySelector('input[name=gHesap][value=nakit]');
+    if (r) r.checked = true;
   }
 
-  // Modalı aç (classList.add garantili çalışır — CSS: .mbg { display:none } .mbg.open { display:flex })
+  // İkili garanti: hem style hem classList — her tarayıcıda açılır
+  modal.style.display = 'flex';
   modal.classList.add('open');
 
-  // Bakiye bilgisini MODAL AÇILDIKTAN SONRA güncelle — checked element artık görünür
-  try { updateGiderBakiyeInfo(); } catch(_) {}
+  // Bakiye bilgisini modal açıldıktan sonra güncelle
+  try { updateGiderBakiyeInfo(); } catch (_) {}
 
   setTimeout(() => { const t = G('gTutar'); if (t) t.focus(); }, 150);
 };
