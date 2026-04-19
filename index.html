@@ -553,6 +553,10 @@ body{font-family:'Inter',sans-serif;background:var(--d1);color:var(--t1);min-hei
       <div class="ff" style="margin-bottom:0"><label>Tarih</label><input type="date" id="oTarih"></div>
       <div class="ff" style="margin-bottom:0"><label>Saat</label><input type="time" id="oSaat"></div>
     </div>
+    <div class="fg2m" style="margin-top:12px">
+      <div class="ff" style="margin-bottom:0"><label>Ad Soyad</label><input type="text" id="oAdSoyad" placeholder="Organizasyon sahibi"></div>
+      <div class="ff" style="margin-bottom:0"><label>Telefon</label><input type="tel" id="oTelefon" placeholder="05XX XXX XX XX" inputmode="tel"></div>
+    </div>
     <div class="ff" style="margin-top:12px"><label>Kişi Sayısı</label><input type="number" id="oKisi" placeholder="0" min="0" inputmode="numeric"></div>
     <div class="ff"><label>Açıklama</label><input type="text" id="oAcik" placeholder="Düğün, Nişan, Doğum Günü..."></div>
     <div class="ff"><label>İkram Durumu</label><div class="rg">
@@ -1466,6 +1470,11 @@ window.kaydetBakiye = function () {
     toast('Bakiye işlemi güncellendi', 'success');
   } else {
     S.bakiyeIslemleri.unshift({ id: uid(), hesap: editBH, tip, tutar, tarih, aciklama });
+    // Geçmişe kaydet — sadece yeni ekleme
+    const tipAd = tip === 'ekle' ? 'Bakiye Ekleme' : tip === 'cikar' ? 'Bakiye Çıkarma' : 'Bakiye Ayarlama';
+    const islemAcik = aciklama || tipAd;
+    if (!S.islemler) S.islemler = [];
+    S.islemler.unshift({ id: uid(), tip: tip === 'cikar' ? 'gider' : 'gelir', aciklama: islemAcik + ' (' + (editBH === 'nakit' ? 'Nakit' : 'Banka') + ')', tutar: tutar, hesap: editBH, tarih: tarih });
     toast('Bakiye işlemi eklendi', 'success');
   }
   recalc(); window.closeModal('mBakiye'); updateAll(); sched();
@@ -1734,15 +1743,22 @@ window.kaydetGider = function() {
     if (hesap === 'nakit') S.kasa.nakit -= tutar;
     else                   S.kasa.banka -= tutar;
     S.nakit = S.kasa.nakit; S.banka = S.kasa.banka;
+    // Düzenleme de geçmişe kaydedilsin
+    if (!S.islemler) S.islemler = [];
+    S.islemler.unshift({ id: uid(), tip: 'gider', aciklama: g.kat + (aciklama ? ' — ' + aciklama : '') + ' (düzenlendi)', tutar: tutar, hesap: hesap, tarih: tarih });
     toast('Gider güncellendi', 'success');
     if (modal) delete modal.dataset.editId;
   } else {
     // YENİ KAYIT
     const mevcutBak = hesap === 'nakit' ? S.kasa.nakit : S.kasa.banka;
     if (mevcutBak < tutar) { toast('Yetersiz bakiye! Mevcut: ' + fmt(mevcutBak), 'error'); return; }
-    const gider = { id: Date.now(), kat: katAdi, tutar: tutar, hesap: hesap, tarih: tarih, aciklama: aciklama };
+    const giderId = Date.now();
+    const gider = { id: giderId, kat: katAdi, tutar: tutar, hesap: hesap, tarih: tarih, aciklama: aciklama };
     if (!S.giderler) S.giderler = [];
     S.giderler.unshift(gider);
+    // Geçmişe kaydet
+    if (!S.islemler) S.islemler = [];
+    S.islemler.unshift({ id: uid(), tip: 'gider', aciklama: katAdi + (aciklama ? ' — ' + aciklama : ''), tutar: tutar, hesap: hesap, tarih: tarih });
     if (hesap === 'nakit') S.kasa.nakit -= tutar;
     else                   S.kasa.banka -= tutar;
     S.nakit = S.kasa.nakit; S.banka = S.kasa.banka;
@@ -1855,6 +1871,7 @@ window.openOrgModal = function (id) {
     const o = S.organizasyonlar.find(x => x.id === id); if (!o) return;
     txt('moT', 'Organizasyonu Düzenle');
     G('oTarih').value = o.tarih; G('oSaat').value = o.saat || '';
+    G('oAdSoyad').value = o.adSoyad || ''; G('oTelefon').value = o.telefon || '';
     G('oKisi').value = o.kisi || ''; G('oAcik').value = o.aciklama || '';
     G('oUcret').value = o.ucret; G('oKapora').value = o.kapora || '';
     const ir = document.querySelector('input[name=oIkram][value=' + o.ikram + ']'); if (ir) ir.checked = true;
@@ -1868,6 +1885,7 @@ window.openOrgModal = function (id) {
   } else {
     txt('moT', 'Yeni Organizasyon');
     G('oTarih').value = today(); G('oSaat').value = '';
+    G('oAdSoyad').value = ''; G('oTelefon').value = '';
     ['oKisi','oAcik','oUcret','oKapora'].forEach(i => G(i).value = '');
     document.querySelector('input[name=oIkram][value=ikramli]').checked = true;
     document.querySelector('input[name=oOdeme][value=pesin]').checked   = true;
@@ -1884,6 +1902,8 @@ window.cakismaYes = function () { G('cCakisma').classList.remove('open'); if (pe
 window.kaydetOrg = function () {
   const tarih    = G('oTarih').value;
   const saat     = G('oSaat').value.trim();
+  const adSoyad  = G('oAdSoyad').value.trim();
+  const telefon  = G('oTelefon').value.trim();
   const aciklama = G('oAcik').value.trim() || 'Organizasyon';
   const kisi     = parseInt(G('oKisi').value) || 0;
   const ucret    = parseFloat(G('oUcret').value);
@@ -1895,16 +1915,16 @@ window.kaydetOrg = function () {
     if (cx.length) {
       txt('cakismaMsg', dateStr(tarih) + ' ' + saat + ' için zaten organizasyon mevcut!');
       G('cakismaDet').innerHTML = cx.map(o => `<div>• <b>${o.aciklama}</b> — ${o.saat} (${fmt(o.ucret)})</div>`).join('');
-      pendOrg = { tarih, saat, aciklama, kisi, ucret, ikram, odeme };
+      pendOrg = { tarih, saat, adSoyad, telefon, aciklama, kisi, ucret, ikram, odeme };
       G('cCakisma').classList.add('open');
       return;
     }
   }
-  saveOrg({ tarih, saat, aciklama, kisi, ucret, ikram, odeme });
+  saveOrg({ tarih, saat, adSoyad, telefon, aciklama, kisi, ucret, ikram, odeme });
 };
 
 function saveOrg(data) {
-  const { tarih, saat, aciklama, kisi, ucret, ikram, odeme } = data;
+  const { tarih, saat, adSoyad, telefon, aciklama, kisi, ucret, ikram, odeme } = data;
   if (editOId) {
     const o = S.organizasyonlar.find(x => x.id === editOId); if (!o) return;
     S.islemler = S.islemler.filter(x => x.refId !== editOId);
@@ -1920,7 +1940,7 @@ function saveOrg(data) {
         S.islemler.unshift({ id:uid(), tip:'gelir', aciklama:aciklama+' — Kapora', tutar:kapora, hesap:kaporaHesap, tarih, refId:editOId });
       }
     }
-    Object.assign(o, { tarih, saat, aciklama, kisi, ikram, ucret, kapora, kaporaHesap, durum, hesap });
+    Object.assign(o, { tarih, saat, adSoyad: adSoyad||'', telefon: telefon||'', aciklama, kisi, ikram, ucret, kapora, kaporaHesap, durum, hesap });
     toast('Organizasyon güncellendi', 'success');
   } else {
     const id = uid(); let hesap = null, kapora = 0, kaporaHesap = null;
@@ -1934,7 +1954,7 @@ function saveOrg(data) {
         S.islemler.unshift({ id:uid(), tip:'gelir', aciklama:aciklama+' — Kapora', tutar:kapora, hesap:kaporaHesap, tarih, refId:id });
       }
     }
-    S.organizasyonlar.unshift({ id, tarih, saat, aciklama, kisi, ikram, ucret, kapora, kaporaHesap,
+    S.organizasyonlar.unshift({ id, tarih, saat, adSoyad: adSoyad||'', telefon: telefon||'', aciklama, kisi, ikram, ucret, kapora, kaporaHesap,
       durum: odeme === 'pesin' ? 'tahsil' : 'vadeli', hesap });
     toast(odeme === 'pesin' ? 'Organizasyon eklendi' : kapora > 0 ? 'Vadeli, kapora eklendi' : 'Vadeli kaydedildi', 'success');
   }
@@ -2024,10 +2044,12 @@ function renderOList() {
     const kalan = o.ucret - (o.kapora || 0);
     const ks = (o.durum === 'vadeli' && (o.kapora || 0) > 0)
       ? `<br><span style="color:var(--amber);font-size:10.5px">Kapora: ${fmt(o.kapora)} · Kalan: ${fmt(kalan)}</span>` : '';
+    const iletisim = [o.adSoyad, o.telefon].filter(Boolean).join(' · ');
     return `<div class="li">
       <div class="li-i">
         <div class="li-t">${o.aciklama} ${badge}</div>
         <div class="li-s">${dateStr(o.tarih)}${o.saat ? ' · 🕐 ' + o.saat : ''} · ${o.kisi} kişi · ${o.ikram} · ${o.hesap ? (o.hesap === 'nakit' ? '💵 Nakit' : '🏦 Banka') : '⏳ Bekleniyor'}${ks}</div>
+        ${iletisim ? `<div class="li-s" style="margin-top:3px;color:var(--blue)">👤 ${iletisim}</div>` : ''}
       </div>
       <div class="li-r">
         <span class="amt ${o.durum === 'tahsil' ? 'pos' : 'pnd'}">${fmt(o.ucret)}</span>
@@ -2049,7 +2071,7 @@ window.setGecF = function (f, btn) {
 
 function renderGecmis() {
   const el = G('elGecmis'); if (!el) return;
-  const list = S.islemler.filter(i =>
+  const list = (S.islemler || []).filter(i =>
     fGec === 'bugun'  ? isToday(i.tarih)     :
     fGec === 'hafta'  ? isThisWeek(i.tarih)  :
     fGec === 'ay'     ? isThisMonth(i.tarih) :
@@ -2057,13 +2079,24 @@ function renderGecmis() {
     fGec === 'gider'  ? i.tip === 'gider'    : true
   );
   if (!list.length) { el.innerHTML = '<div class="empty">Bu dönemde işlem yok</div>'; return; }
-  el.innerHTML = list.map(i => `<div class="li">
-    <div class="li-i">
-      <div class="li-t">${i.aciklama}</div>
-      <div class="li-s">${dateStr(i.tarih)} · ${i.tip === 'gelir' ? '📥 Gelir' : '📤 Gider'} · ${i.hesap === 'nakit' ? '💵 Nakit' : '🏦 Banka'}</div>
-    </div>
-    <span class="amt ${i.tip === 'gelir' ? 'pos' : 'neg'}">${i.tip === 'gider' ? '-' : '+'}${fmt(i.tutar)}</span>
-  </div>`).join('');
+  el.innerHTML = list.map(i => {
+    const isGider  = i.tip === 'gider';
+    const hesapStr = i.hesap === 'nakit' ? '💵 Nakit' : (i.hesap === 'banka' ? '🏦 Banka' : '');
+    // Açıklamaya göre ikon seç
+    const acik = i.aciklama || '';
+    let ikon = isGider ? '📤' : '📥';
+    if (acik.includes('Bakiye')) ikon = '💰';
+    if (acik.includes('Kapora')) ikon = '🤝';
+    if (acik.includes('Peşin') || acik.includes('Tahsilat')) ikon = '✅';
+    if (acik.includes('Personel')) ikon = '👤';
+    return '<div class="li">' +
+      '<div class="li-i">' +
+        '<div class="li-t">' + ikon + ' ' + acik + '</div>' +
+        '<div class="li-s">' + dateStr(i.tarih) + (hesapStr ? ' · ' + hesapStr : '') + '</div>' +
+      '</div>' +
+      '<span class="amt ' + (isGider ? 'neg' : 'pos') + '">' + (isGider ? '-' : '+') + fmt(i.tutar) + '</span>' +
+    '</div>';
+  }).join('');
 }
 
 /* ── Takvim ── */
