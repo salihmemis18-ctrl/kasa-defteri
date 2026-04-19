@@ -863,6 +863,11 @@ window.doPwChange = async function () {
    ama modal dışına tıklama kapatmıyor).
    Escape de çalışmıyor (aşağıdaki keydown handler'da engellendi).
 ══════════════════════════════════════ */
+/* sifreDegistirAc — menüden çağrılır, modalı açar */
+window.sifreDegistirAc = function() {
+  sifreDegistirModalAc();
+};
+
 function sifreDegistirModalAc() {
   const modal = document.getElementById('sifreDegistirModal');
   if (!modal) return;
@@ -1023,6 +1028,8 @@ async function startApp() {
     <div class="sb-item" onclick="navTo('secOrg')"><span class="sb-ic">🎊</span>Organizasyonlar</div>
     <div class="sb-section">Raporlar</div>
     <div class="sb-item" onclick="navTo('secGecmis')"><span class="sb-ic">📋</span>İşlem Geçmişi</div>
+    <div class="sb-section">Hesabım</div>
+    <div class="sb-item" onclick="sifreDegistirAc()"><span class="sb-ic">🔑</span>Şifremi Değiştir</div>
     ${adminItem}`;
 
   G('mnavEl').innerHTML = `
@@ -1031,6 +1038,7 @@ async function startApp() {
     <button class="mni" onclick="navTo('secOrg')"><span class="ic">🎊</span>Org.</button>
     <button class="mni" onclick="navTo('secGecmis')"><span class="ic">📋</span>Geçmiş</button>
     <button class="mni" onclick="navTo('secBakiye')"><span class="ic">💰</span>Bakiye</button>
+    <button class="mni" onclick="sifreDegistirAc()"><span class="ic">🔑</span>Şifre</button>
     ${isAdmin ? '<button class="mni" onclick="navTo(\'secAdmin\')"><span class="ic">⚙️</span>Admin</button>' : ''}`;
 
   G('panelDate').textContent = new Date().toLocaleDateString('tr-TR',
