@@ -1114,32 +1114,33 @@ function hideSync() { setTimeout(() => G('syncEl').classList.remove('on'), 800);
    Not: "firma" koleksiyonu yerine "firmalar" kullanıldı — tutarlılık için
 ══════════════════════════════════════ */
 window.firmaEkle = async function () {
-  const ad  = G('firmaAd').value.trim();
-  const btn = G('firmaEkleBtn');
-  const msg = G('firmaEkleMsg');
-  msg.style.display = 'none';
+  const adEl = G('firmaAd');
+  const ad   = adEl ? adEl.value.trim() : '';
+  const btn  = G('firmaEkleBtn');
+  const msg  = G('firmaEkleMsg');
+  if (msg) msg.style.display = 'none';
   if (!ad) { showInlineMsg(msg, '❌ Firma adı girin', 'error'); return; }
-  btn.disabled = true; btn.textContent = 'Oluşturuluyor...';
+  if (btn) { btn.disabled = true; btn.textContent = 'Oluşturuluyor...'; }
   try {
-    const newId = uid();
+    const newId = String(uid()); // Firestore doc ID mutlaka string olmalı
     await setDoc(doc(db, 'firmalar', newId), {
       firmaAdi:  ad,
       olusturan: CU.email,
       createdAt: new Date().toISOString(),
-      // Başlangıç veri yapısı
       nakit: 0, banka: 0,
       kategoriler:     DEF_KAT.map(k=>({...k})),
-      bakiyeIslemleri: [], organizasyonlar: [], islemler: []
+      bakiyeIslemleri: [], giderler: [], organizasyonlar: [], islemler: []
     });
-    showInlineMsg(msg, `✅ Firma oluşturuldu!\nFirma Adı: ${ad}\nFirma ID: ${newId}\n\nBu ID'yi kopyalayın — kullanıcı Firestore kaydına ekleyin.`, 'success');
-    G('firmaAd').value = '';
+    showInlineMsg(msg, '✅ Firma oluşturuldu!\nFirma Adı: ' + ad + '\nFirma ID: ' + newId + '\n\nBu ID\'yi kopyalayın — kullanıcı Firestore kaydına ekleyin.', 'success');
+    if (adEl) adEl.value = '';
     toast('Firma oluşturuldu: ' + ad, 'success');
     console.log('Yeni Firma ID:', newId);
-    adminLoadFirmalar(); // listeyi güncelle
+    adminLoadFirmalar();
   } catch (e) {
     showInlineMsg(msg, '❌ Hata: ' + (e.message || e.code), 'error');
+    console.error('firmaEkle hatası:', e);
   }
-  btn.disabled = false; btn.textContent = 'Firma Oluştur';
+  if (btn) { btn.disabled = false; btn.textContent = 'Firma Oluştur'; }
 };
 
 /* ── Admin: Tüm firmaları yükle (dropdown + liste) ── */
