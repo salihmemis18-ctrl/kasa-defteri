@@ -1446,65 +1446,44 @@ function renderBList() {
 /* ══════════════════════════════════════
    KATEGORİ CRUD + RENDER
    Sorun 1 düzeltmesi: onclick event doğrudan HTML'de + hover ile .kat-acts göster
-══════════════════════════════════════
+══════════════════════════════════════ */
 function renderKatGrid() {
-  const el = G('katGrid'); 
-  if (!el) return;
+  const el = G('katGrid'); if (!el) return;
 
+  // onclick string olarak HTML'e yazılıyor.
+  // Bu yöntem type="module" scope sorununu tamamen bypass eder:
+  // tarayıcı onclick string'i global (window) scope'unda çalıştırır,
+  // dolayısıyla window.katTikla, window.katDuzenle, window.katSil
+  // garantili bulunur.
   let html = S.kategoriler.map((k, i) => `
-    <div class="kat-item" onclick="openGiderModal(null,'${k.ad}','${k.icon}')">
-      
+    <div class="kat-item" onclick="katTikla(${i})">
       <div class="kat-acts">
-        <div class="kat-act" onclick="event.stopPropagation(); openKatModal(${i})" title="Düzenle">✏️</div>
-        <div class="kat-act" onclick="event.stopPropagation(); silKat(${i})" title="Sil">🗑️</div>
+        <span class="kat-act" onclick="event.stopPropagation();katDuzenle(${i})" title="Düzenle">✏️</span>
+        <span class="kat-act" onclick="event.stopPropagation();katSil(${i})" title="Sil">🗑️</span>
       </div>
-
       <span class="kat-icon">${k.icon}</span>
       <span class="kat-ad">${k.ad}</span>
-    </div>
-  `).join('');
+    </div>`).join('');
+
+  html += `<div class="kat-item kat-add" onclick="katYeniEkle()">
+    <span class="kat-icon">➕</span>
+    <span class="kat-ad">Yeni Kategori</span>
+  </div>`;
 
   el.innerHTML = html;
 }
 
-  // Her kategori kartına event bağla
-  // window.openGiderModal kullanılıyor — module scope sorunu önlenir
-  el.querySelectorAll('.kat-item:not(.kat-add)').forEach(item => {
-    const idx = parseInt(item.getAttribute('data-kat-idx'));
-    const k   = S.kategoriler[idx];
-    if (!k) return;
-
-    // Kategoriye tıkla → gider modalı aç
-    item.addEventListener('click', (e) => {
-      // Düzenle/Sil butonlarına tıklandıysa gider modalını açma
-      if (e.target.closest('.kat-acts')) return;
-      console.log('Gider modal açılıyor:', k.ad, k.icon);
-      window.openGiderModal(null, k.ad, k.icon);
-    });
-
-    // Düzenle butonu
-    const editBtn = item.querySelector('[data-edit-idx]');
-    if (editBtn) {
-      editBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        window.openKatModal(idx);
-      });
-    }
-
-    // Sil butonu
-    const delBtn = item.querySelector('[data-del-idx]');
-    if (delBtn) {
-      delBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        window.silKat(idx);
-      });
-    }
-  });
-
-  // Yeni kategori butonu
-  const addBtn = el.querySelector('#katAddBtn');
-  if (addBtn) addBtn.addEventListener('click', () => window.openKatModal(null));
-}
+/* Kategori tıklama dispatcher'ları — window scope'unda tanımlı,
+   onclick string'lerden güvenle çağrılır */
+window.katTikla = function(i) {
+  const k = S.kategoriler[i];
+  if (!k) return;
+  console.log('Kategori tıklandı:', k.ad, k.icon);
+  window.openGiderModal(null, k.ad, k.icon);
+};
+window.katDuzenle = function(i) { window.openKatModal(i); };
+window.katSil     = function(i) { window.silKat(i); };
+window.katYeniEkle = function()  { window.openKatModal(null); };
 
 window.openKatModal = function (idx) {
   editKatI = (idx !== undefined && idx !== null) ? Number(idx) : null;
