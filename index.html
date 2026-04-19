@@ -895,10 +895,10 @@ function sifreDegistirModalAc(menudenAcildi) {
   setTimeout(() => { if (y1) y1.focus(); }, 200);
 }
 
-function sifreDegistirModalKapat() {
+window.sifreDegistirModalKapat = function() {
   const modal = document.getElementById('sifreDegistirModal');
   if (modal) modal.style.display = 'none';
-}
+};
 
 function sdmErrShow(msg) {
   const el = document.getElementById('sdmErr');
