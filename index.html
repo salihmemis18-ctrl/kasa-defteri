@@ -696,8 +696,20 @@ body{font-family:'Inter',sans-serif;background:var(--d1);color:var(--t1);min-hei
       Şifremi Kaydet ve Devam Et →
     </button>
 
+    <!-- İptal butonu — sadece menüden açılınca görünür, ilk girişte gizli -->
+    <div id="sdmIptalDiv" style="display:none;text-align:center;margin-top:10px">
+      <button
+        onclick="sifreDegistirModalKapat()"
+        style="background:none;border:1px solid var(--d4);color:var(--t2);font-size:13px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;padding:8px 24px;border-radius:var(--r);transition:all .13s;"
+        onmouseover="this.style.background='rgba(255,255,255,.06)'"
+        onmouseout="this.style.background='none'"
+      >
+        İptal
+      </button>
+    </div>
+
     <!-- Çıkış seçeneği -->
-    <div style="text-align:center;margin-top:14px">
+    <div style="text-align:center;margin-top:10px">
       <button
         onclick="doLogout()"
         style="background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;text-underline-offset:3px;"
@@ -863,12 +875,12 @@ window.doPwChange = async function () {
    ama modal dışına tıklama kapatmıyor).
    Escape de çalışmıyor (aşağıdaki keydown handler'da engellendi).
 ══════════════════════════════════════ */
-/* sifreDegistirAc — menüden çağrılır, modalı açar */
+/* sifreDegistirAc — menüden çağrılır, İptal butonu gösterilir */
 window.sifreDegistirAc = function() {
-  sifreDegistirModalAc();
+  sifreDegistirModalAc(true); // true = menüden açıldı, iptal göster
 };
 
-function sifreDegistirModalAc() {
+function sifreDegistirModalAc(menudenAcildi) {
   const modal = document.getElementById('sifreDegistirModal');
   if (!modal) return;
   modal.style.display = 'flex';
@@ -877,6 +889,9 @@ function sifreDegistirModalAc() {
   if (y1) y1.value = '';
   if (y2) y2.value = '';
   sdmErrHide();
+  // İptal butonu: menüden açılıyorsa göster, ilk giriş zorunluysa gizle
+  const iptalDiv = document.getElementById('sdmIptalDiv');
+  if (iptalDiv) iptalDiv.style.display = menudenAcildi ? 'block' : 'none';
   setTimeout(() => { if (y1) y1.focus(); }, 200);
 }
 
@@ -1363,7 +1378,7 @@ function bakiyeyiGuncelle() {
 ══════════════════════════════════════ */
 function updateAll() {
   recalc(); // önce bakiyeyi hesapla
-  const bek = S.organizasyonlar.filter(o => o.durum === 'vadeli').reduce((s, o) => s + (o.ucret || 0), 0);
+  const bek = S.organizasyonlar.filter(o => o.durum === 'vadeli').reduce((s, o) => s + ((o.ucret || 0) - (o.kapora || 0)), 0);
   const tah = S.organizasyonlar.filter(o => o.durum === 'tahsil').reduce((s, o) => s + (o.ucret || 0), 0);
   const gid = (S.giderler || []).reduce((s, g) => s + (g.tutar || 0), 0);
   const net = tah - gid;
