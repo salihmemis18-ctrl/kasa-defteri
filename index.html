@@ -2133,14 +2133,20 @@ window.calClick = function (dk) {
   if (!orgs.length) return;
   G('calDet').innerHTML = `<div style="background:var(--gbg);border:1px solid rgba(16,185,129,.3);border-radius:var(--r);padding:10px 13px;margin-top:8px">
     <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px">📅 ${dateStr(dk)} — ${orgs.length} Organizasyon</div>
-    ${orgs.map(o => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(16,185,129,.2);gap:8px">
-      <div>
-        <span style="font-size:12.5px;font-weight:500">${o.aciklama}</span>
-        ${o.saat ? `<span style="font-size:10.5px;color:var(--t3);margin-left:6px">🕐 ${o.saat}</span>` : ''}
-        <span class="badge ${o.durum === 'tahsil' ? 'bt' : 'bv'}" style="margin-left:6px">${o.durum === 'tahsil' ? 'Tahsil' : 'Vadeli'}</span>
-      </div>
-      <span style="font-size:13px;font-weight:700;color:var(--green);white-space:nowrap">${fmt(o.ucret)}</span>
-    </div>`).join('')}
+    ${orgs.map(o => {
+      const iletisim = [o.adSoyad, o.telefon].filter(Boolean).join(' · ');
+      return `<div style="padding:6px 0;border-bottom:1px solid rgba(16,185,129,.2)">
+        <div style="display:flex;justify-content:space-between;gap:8px">
+          <div>
+            <span style="font-size:12.5px;font-weight:500">${o.aciklama}</span>
+            ${o.saat ? `<span style="font-size:10.5px;color:var(--t3);margin-left:6px">🕐 ${o.saat}</span>` : ''}
+            <span class="badge ${o.durum === 'tahsil' ? 'bt' : 'bv'}" style="margin-left:6px">${o.durum === 'tahsil' ? 'Tahsil' : 'Vadeli'}</span>
+          </div>
+          <span style="font-size:13px;font-weight:700;color:var(--green);white-space:nowrap">${fmt(o.ucret)}</span>
+        </div>
+        ${iletisim ? `<div style="font-size:11px;color:var(--blue);margin-top:3px">👤 ${iletisim}</div>` : ''}
+      </div>`;
+    }).join('')}
   </div>`;
 };
 </script>
