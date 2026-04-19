@@ -1446,23 +1446,26 @@ function renderBList() {
 /* ══════════════════════════════════════
    KATEGORİ CRUD + RENDER
    Sorun 1 düzeltmesi: onclick event doğrudan HTML'de + hover ile .kat-acts göster
-══════════════════════════════════════ */
+══════════════════════════════════════
 function renderKatGrid() {
-  const el = G('katGrid'); if (!el) return;
+  const el = G('katGrid'); 
+  if (!el) return;
+
   let html = S.kategoriler.map((k, i) => `
-    <div class="kat-item" data-kat-idx="${i}">
+    <div class="kat-item" onclick="openGiderModal(null,'${k.ad}','${k.icon}')">
+      
       <div class="kat-acts">
-        <div class="kat-act" data-edit-idx="${i}" title="Düzenle">✏️</div>
-        <div class="kat-act" data-del-idx="${i}" title="Sil">🗑️</div>
+        <div class="kat-act" onclick="event.stopPropagation(); openKatModal(${i})" title="Düzenle">✏️</div>
+        <div class="kat-act" onclick="event.stopPropagation(); silKat(${i})" title="Sil">🗑️</div>
       </div>
+
       <span class="kat-icon">${k.icon}</span>
       <span class="kat-ad">${k.ad}</span>
-    </div>`).join('');
-  html += `<div class="kat-item kat-add" id="katAddBtn">
-    <span class="kat-icon">➕</span>
-    <span class="kat-ad">Yeni Kategori</span>
-  </div>`;
+    </div>
+  `).join('');
+
   el.innerHTML = html;
+}
 
   // Her kategori kartına event bağla
   // window.openGiderModal kullanılıyor — module scope sorunu önlenir
