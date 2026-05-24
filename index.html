@@ -1007,11 +1007,20 @@ onAuthStateChanged(auth, async (user) => {
   CU = user;
   showScreen('scLoading');
 
+  // Timeout koruması — 15 saniye içinde bitmezse login'e dön
+  const timeout = setTimeout(() => {
+    console.error('Login timeout — 15s geçti');
+    showScreen('scLogin');
+    errShow('loginErr', 'Bağlantı zaman aşımına uğradı. Lütfen tekrar deneyin.');
+  }, 15000);
+
   try {
     const metaRef  = doc(db, 'kullanicilar', user.uid);
     const metaSnap = await getDoc(metaRef);
 
     if (!metaSnap.exists()) {
+      clearTimeout(timeout);
+      console.warn('Kullanıcı dokümanı bulunamadı:', user.uid);
       await signOut(auth);
       showScreen('scLogin');
       errShow('loginErr', 'Hesabınız henüz yapılandırılmamış. Lütfen yöneticinizle iletişime geçin.');
@@ -1019,13 +1028,18 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     userMeta = metaSnap.data();
-    userRole = userMeta.rol || 'user';
+    // Firestore'da hem "rol" hem "role" olabilir — ikisini de kontrol et
+    userRole = userMeta.rol || userMeta.role || 'user';
     firmaId  = userMeta.firmaId || null;
 
+    console.log('Kullanıcı meta:', { email: user.email, userRole, firmaId, pwChanged: userMeta.pwChanged });
+
+    // Admin firmaId olmadan girebilir
     if (!firmaId && userRole !== 'admin') {
+      clearTimeout(timeout);
       await signOut(auth);
       showScreen('scLogin');
-      errShow('loginErr', 'Hesabınıza henüz firma atanmamış.');
+      errShow('loginErr', 'Hesabınıza henüz firma atanmamış. Lütfen yöneticinizle iletişime geçin.');
       return;
     }
 
@@ -1034,21 +1048,25 @@ onAuthStateChanged(auth, async (user) => {
         const firmaSnap = await getDoc(doc(db, 'firmalar', firmaId));
         firmaAdi = firmaSnap.exists() ? (firmaSnap.data().firmaAdi || 'Firma') : 'Firma';
       } catch (_) { firmaAdi = 'Firma'; }
+    } else if (userRole === 'admin') {
+      firmaAdi = 'Admin';
     }
 
-    // pwChanged kontrolü — false ise şifre değiştirme modalı göster
-    // Uygulama arka planda yüklenir ama modal geçilmeden kullanılamaz
-    if (!userMeta.pwChanged) {
-      await startApp();          // arka planda uygulamayı yükle
-      sifreDegistirModalAc();   // üstüne modalı aç
+    clearTimeout(timeout);
+
+    // pwChanged kontrolü
+    if (userMeta.pwChanged === false) {
+      await startApp();
+      sifreDegistirModalAc();
       return;
     }
     await startApp();
 
   } catch (e) {
-    console.error('onAuthStateChanged error:', e);
+    clearTimeout(timeout);
+    console.error('onAuthStateChanged hatası:', e);
     showScreen('scLogin');
-    errShow('loginErr', 'Oturum açılırken hata oluştu. Lütfen tekrar deneyin.');
+    errShow('loginErr', 'Oturum açılırken hata oluştu: ' + (e.message || 'Bilinmeyen hata'));
   }
 });
 
